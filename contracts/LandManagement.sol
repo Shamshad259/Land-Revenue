@@ -73,12 +73,34 @@ contract LandManagement {
         bool seniorRegistrarApproved;
     }
 
+     // New User Identity struct
+    struct UserIdentity {
+        string governmentId;     // Government ID hash
+        bool isVerified;         // Verification status
+        bool isBlocked;          // If true, all transactions are blocked
+        address recoveryAddress; // Secondary recovery address
+        bytes32 backupHash;     // Hash of backup data for recovery
+        uint256 lastBlockTime;  // Timestamp of last block request
+        mapping(address => bool) trustedContacts; // List of trusted contacts who can help in recovery
+    }
+
+    struct RecoveryRequest {
+    address newAddress;
+    uint256 timestamp;
+    bool isActive;
+}
+
     // Essential Mappings
     mapping(address => Roles) public userRoles;
     mapping(uint256 => Land) public lands;
     mapping(uint256 => SaleRequest) public saleRequests;
     mapping(uint256 => DeathTransferRequest) public deathTransferRequests;
     mapping(address => uint256[]) private userOwnedLands;
+      // New mappings for user security
+    mapping(address => UserIdentity) public userIdentities;
+    mapping(string => address) private govIdToAddress;      // Map government IDs to addresses
+    mapping(address => RecoveryRequest) private recoveryRequests;
+    mapping(bytes32 => bool) private usedRecoveryCodes;     // Track used recovery codes
 
     // Events (keep only essential events)
     event LandRegistered(uint256 indexed thandaperNumber, address indexed owner);
@@ -94,6 +116,13 @@ contract LandManagement {
     event LandTypeChangeRequested(uint256 indexed thandaperNumber, LandType newLandType);
     event LandTypeChangeApproved(uint256 indexed thandaperNumber, LandType newLandType);
     event TaxPaid(uint256 indexed thandaperNumber, address indexed payer, uint256 amount);
+        // Events for security operations
+    event UserRegistered(address indexed user, string govId);
+    event AccountBlocked(address indexed user, uint256 timestamp);
+    event AccountUnblocked(address indexed user, uint256 timestamp);
+    event RecoveryRequested(address indexed user, uint256 timestamp);
+    event RecoveryCompleted(address indexed oldAddress, address indexed newAddress);
+    event TrustedContactAdded(address indexed user, address indexed contact);
 
     constructor() {
         userRoles[msg.sender] = Roles.ChiefSecretary;
@@ -122,6 +151,16 @@ contract LandManagement {
 
     modifier isValidTaxAmount(uint256 thandaperNumber, uint256 amount) {
         require(lands[thandaperNumber].taxAmount == amount, "Invalid tax amount");
+        _;
+    }
+     // New modifiers
+    modifier notBlocked(address user) {
+        require(!userIdentities[user].isBlocked, "Account is blocked");
+        _;
+    }
+
+    modifier onlyVerifiedUser() {
+        require(userIdentities[msg.sender].isVerified, "User not verified");
         _;
     }
 
@@ -203,12 +242,123 @@ contract LandManagement {
         );
     }
 
+    // Register user with government ID
+    function registerUser(string memory govId) public {
+        require(!userIdentities[msg.sender].isVerified, "User already registered");
+        require(govIdToAddress[govId] == address(0), "Government ID already registered");
+        
+        UserIdentity storage newUser = userIdentities[msg.sender];
+        newUser.governmentId = govId;
+        newUser.isVerified = true;
+        newUser.isBlocked = false;
+        
+        govIdToAddress[govId] = msg.sender;
+        
+        emit UserRegistered(msg.sender, govId);
+    }
 
+    // Block account in case of compromise
+    function blockAccount(string memory govId) public {
+        address userAddress = govIdToAddress[govId];
+        require(userAddress != address(0), "User not found");
+        require(
+            msg.sender == userAddress || 
+            userRoles[msg.sender] == Roles.SeniorRegistrar,
+            "Unauthorized"
+        );
+
+        UserIdentity storage user = userIdentities[userAddress];
+        user.isBlocked = true;
+        user.lastBlockTime = block.timestamp;
+
+        emit AccountBlocked(userAddress, block.timestamp);
+    }
+
+    // Unblock account after verification
+    function unblockAccount(address userAddress) public onlyRole(Roles.SeniorRegistrar) {
+        require(userIdentities[userAddress].isBlocked, "Account not blocked");
+        
+        UserIdentity storage user = userIdentities[userAddress];
+        user.isBlocked = false;
+        
+        emit AccountUnblocked(userAddress, block.timestamp);
+    }
+
+    // Add trusted contact for recovery
+    function addTrustedContact(address contact) public onlyVerifiedUser {
+        require(contact != msg.sender, "Cannot add self as trusted contact");
+        require(userIdentities[contact].isVerified, "Contact must be verified");
+        
+        userIdentities[msg.sender].trustedContacts[contact] = true;
+        
+        emit TrustedContactAdded(msg.sender, contact);
+    }
+
+    // Initiate recovery process
+  function initiateRecovery(
+    string memory govId,
+    address newAddress,
+    bytes32 backupHash
+) public {
+    address oldAddress = govIdToAddress[govId];
+    require(oldAddress != address(0), "User not found");
+    require(!usedRecoveryCodes[backupHash], "Recovery code already used");
+    require(newAddress != address(0), "Invalid new address");
+    require(newAddress != oldAddress, "New address must be different");
+    
+    UserIdentity storage user = userIdentities[oldAddress];
+    require(user.backupHash == backupHash, "Invalid backup hash");
+    
+    recoveryRequests[oldAddress] = RecoveryRequest({
+        newAddress: newAddress,
+        timestamp: block.timestamp,
+        isActive: true
+    });
+    
+    emit RecoveryRequested(oldAddress, block.timestamp);
+}
+
+// Updated complete recovery function to use the new RecoveryRequest struct
+function completeRecovery(
+    string memory govId,
+    address oldAddress,
+    address newAddress
+) public onlyRole(Roles.SeniorRegistrar) {
+    require(govIdToAddress[govId] == oldAddress, "Invalid government ID");
+    
+    RecoveryRequest storage request = recoveryRequests[oldAddress];
+    require(request.isActive, "No active recovery request found");
+    require(request.newAddress == newAddress, "Address mismatch with recovery request");
+    
+    // Transfer identity to new address
+    UserIdentity storage oldUser = userIdentities[oldAddress];
+    UserIdentity storage newUser = userIdentities[newAddress];
+    
+    newUser.governmentId = oldUser.governmentId;
+    newUser.isVerified = true;
+    newUser.isBlocked = false;
+    
+    // Update government ID mapping
+    govIdToAddress[govId] = newAddress;
+    
+    // Transfer land ownership
+    uint256[] memory ownedLands = userOwnedLands[oldAddress];
+    for(uint i = 0; i < ownedLands.length; i++) {
+        lands[ownedLands[i]].owner = newAddress;
+        userOwnedLands[newAddress].push(ownedLands[i]);
+    }
+    
+    delete userOwnedLands[oldAddress];
+    delete userIdentities[oldAddress];
+    delete recoveryRequests[oldAddress];
+    
+    emit RecoveryCompleted(oldAddress, newAddress);
+}
     // Sale Request
     function initiateSaleRequest(
         uint256 thandaperNumber,
         address buyer
-    ) public landExists(thandaperNumber) {
+    ) public landExists(thandaperNumber) notBlocked(msg.sender) onlyVerifiedUser{
         Land storage land = lands[thandaperNumber];
         require(land.owner == msg.sender, "You are not the owner of this land");
 
@@ -225,7 +375,7 @@ contract LandManagement {
         emit SaleRequested(thandaperNumber, msg.sender, buyer);
     }
 
-    function confirmSaleBySeller(uint256 thandaperNumber) public {
+    function confirmSaleBySeller(uint256 thandaperNumber) public notBlocked(msg.sender) onlyVerifiedUser {
         SaleRequest storage saleRequest = saleRequests[thandaperNumber];
         require(saleRequest.seller == msg.sender, "You are not the seller");
         saleRequest.sellerConfirmed = true;
@@ -233,7 +383,7 @@ contract LandManagement {
         emit SaleConfirmedBySeller(thandaperNumber, msg.sender);
     }
 
-    function confirmSaleByBuyer(uint256 thandaperNumber) public {
+    function confirmSaleByBuyer(uint256 thandaperNumber) public notBlocked(msg.sender) onlyVerifiedUser{
         SaleRequest storage saleRequest = saleRequests[thandaperNumber];
         require(saleRequest.buyer == msg.sender, "You are not the buyer");
         saleRequest.buyerConfirmed = true;
@@ -274,7 +424,7 @@ contract LandManagement {
     function initiateDeathTransfer(
         uint256 thandaperNumber,
         address beneficiary
-    ) public onlyRole(Roles.SubRegistrar) landExists(thandaperNumber) {
+    ) public onlyRole(Roles.SubRegistrar) landExists(thandaperNumber) notBlocked(msg.sender) onlyVerifiedUser{
         deathTransferRequests[thandaperNumber] = DeathTransferRequest({
             thandaperNumber: thandaperNumber,
             beneficiary: beneficiary,
@@ -332,7 +482,7 @@ contract LandManagement {
     function payTax(
         uint256 thandaperNumber,
         uint256 amount
-    ) public isValidTaxAmount(thandaperNumber, amount) {
+    ) public isValidTaxAmount(thandaperNumber, amount) notBlocked(msg.sender) onlyVerifiedUser{
         Land storage land = lands[thandaperNumber];
         require(land.owner == msg.sender, "You are not the owner");
 
@@ -369,7 +519,7 @@ contract LandManagement {
     function requestNonProtectedLandTypeChange(
         uint256 thandaperNumber,
         LandType newLandType
-    ) public landExists(thandaperNumber) isNotProtected(thandaperNumber) {
+    ) public landExists(thandaperNumber) isNotProtected(thandaperNumber) notBlocked(msg.sender) onlyVerifiedUser{
         Land storage land = lands[thandaperNumber];
         require(land.owner == msg.sender, "You are not the owner of this land");
         emit LandTypeChangeRequested(thandaperNumber, newLandType);
