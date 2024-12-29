@@ -1,45 +1,29 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-// import { ChakraProvider } from '@chakra-ui/react';
-import { Web3Provider } from './context/Web3Context';
-import { AuthProvider } from './context/AuthContext';
-// import PrivateRoute from './components/PrivateRoute';
-import Register from './components/auth/Register';
-// import Login from './components/auth/Login';
-// import Dashboard from './pages/Dashboard';
-// import LandRegistry from './pages/LandRegistry';
+// App.jsx
+import { Routes, Route, Navigate } from "react-router-dom";  // Remove BrowserRouter
+import { WalletProvider } from './context/WalletContext';
+import AuthWrapper from './utils/AuthWrapper';  // Updated path
+import Login from "./components/Login";
+import Register from "./components/Register";
+import ProtectedComponent from "./components/ProtectedComponent";
 
 function App() {
     return (
-        // <ChakraProvider>
-            <Web3Provider>
-                <AuthProvider>
-                    <BrowserRouter>
-                        <Routes>
-                            <Route path="/register" element={<Register />} />
-                            {/* <Route path="/login" element={<Login />} /> */}
-                            {/* <Route 
-                                path="/dashboard" 
-                                element={
-                                    <PrivateRoute>
-                                        <Dashboard />
-                                    </PrivateRoute>
-                                } 
-                            />
-                            <Route 
-                                path="/land-registry" 
-                                element={
-                                    <PrivateRoute>
-                                        <LandRegistry />
-                                    </PrivateRoute>
-                                } 
-                            /> */}
-                        </Routes>
-                    </BrowserRouter>
-                </AuthProvider>
-            </Web3Provider>
+        <WalletProvider>
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route 
+                    path="/protected" 
+                    element={
+                        <AuthWrapper>
+                            <ProtectedComponent />
+                        </AuthWrapper>
+                    } 
+                />
+                <Route path="/" element={<Navigate to="/login" />} />
+            </Routes>
+        </WalletProvider>
     );
-    {/* </ChakraProvider> */}
 }
 
 export default App;
