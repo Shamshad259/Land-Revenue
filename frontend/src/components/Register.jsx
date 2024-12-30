@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import axios from "axios";
@@ -17,6 +17,15 @@ const Register = () => {
     const [govId, setGovId] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const savedWallet = localStorage.getItem('walletAddress');
+        
+        if (token && savedWallet) {
+            navigate('/dashboard');
+        }
+    }, [navigate]);
+
     const handleRegister = async (e) => {
         e.preventDefault();
         try {
@@ -27,33 +36,68 @@ const Register = () => {
                 return;
             }
 
+            if (!contract) {
+                throw new Error("Contract is not initialized");
+            }
+
             if (!govId.trim()) {
                 throw new Error("Please enter your Government ID");
             }
 
-            // Get registration transaction data from backend
-            const response = await axios.post("http://localhost:5000/register", {
-                walletAddress,
-                govId
+            // Check if user is already registered - More robust check
+            try {
+                const userIdentity = await contract.userIdentities(walletAddress);
+                console.log("Checking existing registration:", userIdentity);
+                
+                if (userIdentity && userIdentity.isVerified) {
+                    alert("This wallet is already registered. Please proceed to login.");
+                    navigate('/login');
+                    return;
+                }
+            } catch (error) {
+                // Only proceed if the error is due to user not existing
+                if (!error.message.includes('could not decode')) {
+                    throw error;
+                }
+            }
+
+            // Get fresh provider and signer
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            
+            // Create a new contract instance with signer
+            const contractWithSigner = contract.connect(signer);
+
+            // Send transaction with explicit gas limit
+            const tx = await contractWithSigner.registerUser(govId, {
+                gasLimit: 500000 // Higher gas limit to ensure transaction goes through
             });
 
-            const txData = response.data.data;
+            console.log("Waiting for transaction confirmation...");
+            const receipt = await tx.wait();
 
-            // Get the provider and signer
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            const signer = provider.getSigner();
-
-            // Send the registration transaction
-            const tx = await contract.connect(signer).registerUser(govId);
-
-            // Wait for transaction confirmation
-            await tx.wait();
-
-            alert("Registration successful! Please proceed to login.");
-            navigate("/login");
+            if (receipt.status === 1) { // 1 = success
+                alert("Registration successful! Please proceed to login.");
+                navigate("/login");
+            } else {
+                throw new Error("Transaction failed");
+            }
         } catch (error) {
             console.error("Registration error:", error);
-            alert(error.response?.data?.error || error.message || "Registration failed");
+            
+            if (error.code === 'ACTION_REJECTED') {
+                alert("Transaction was rejected in MetaMask");
+            } else if (error.message.includes("User already registered")) {
+                alert("This wallet is already registered. Please proceed to login.");
+                navigate('/login');
+            } else if (error.message.includes("Internal JSON-RPC error")) {
+                alert("Transaction failed. This wallet might already be registered or there was a network error.");
+            } else {
+                alert(
+                    `Registration failed: ${error.message || "Unknown error"}. ` +
+                    "Please make sure you have enough ETH and try again."
+                );
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -91,7 +135,7 @@ const Register = () => {
                             type="text"
                             value={govId}
                             onChange={(e) => setGovId(e.target.value)}
-                            className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                            className="input-field"
                             placeholder="Enter your Government ID"
                             required
                         />

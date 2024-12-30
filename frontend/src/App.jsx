@@ -1,29 +1,32 @@
 // App.jsx
-import { Routes, Route, Navigate } from "react-router-dom";  // Remove BrowserRouter
+import { Routes, Route, Navigate } from "react-router-dom";
 import { WalletProvider } from './context/WalletContext';
-import AuthWrapper from './utils/AuthWrapper';  // Updated path
+import Layout from './components/Layout';
+import AuthWrapper from './utils/AuthWrapper';
 import Login from "./components/Login";
 import Register from "./components/Register";
-import ProtectedComponent from "./components/ProtectedComponent";
+import Dashboard from "./components/Dashboard";
 
 function App() {
-    return (
-        <WalletProvider>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route 
-                    path="/protected" 
-                    element={
-                        <AuthWrapper>
-                            <ProtectedComponent />
-                        </AuthWrapper>
-                    } 
-                />
-                <Route path="/" element={<Navigate to="/login" />} />
-            </Routes>
-        </WalletProvider>
-    );
+  return (
+    <WalletProvider>
+      <Layout>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <AuthWrapper>
+                <Dashboard />
+              </AuthWrapper>
+            } 
+          />
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+        </Routes>
+      </Layout>
+    </WalletProvider>
+  );
 }
 
 export default App;

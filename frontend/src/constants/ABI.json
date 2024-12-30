@@ -1,5 +1,5 @@
 {
-    "abi": [
+  "abi": [
     {
       "inputs": [],
       "stateMutability": "nonpayable",
@@ -314,31 +314,6 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "payer",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "TaxPaid",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
           "internalType": "address",
           "name": "user",
           "type": "address"
@@ -644,11 +619,6 @@
         },
         {
           "internalType": "uint256",
-          "name": "taxAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
           "name": "ownershipStartTime",
           "type": "uint256"
         },
@@ -806,11 +776,6 @@
         },
         {
           "internalType": "uint256",
-          "name": "taxAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
           "name": "ownershipStartTime",
           "type": "uint256"
         },
@@ -823,32 +788,9 @@
           "internalType": "string",
           "name": "geoLocation",
           "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "taxPaymentCount",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "payTax",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -897,11 +839,6 @@
           "internalType": "bool",
           "name": "protectedStatus",
           "type": "bool"
-        },
-        {
-          "internalType": "uint256",
-          "name": "taxAmount",
-          "type": "uint256"
         },
         {
           "internalType": "string",
@@ -1015,6 +952,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "enum LandManagement.Roles",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "name": "setUserRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

@@ -7,7 +7,10 @@
     "compile": "hardhat compile",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "nodeRun": "hardhat node",
-    "test": "hardhat test"
+    "setup:roles": "hardhat run scripts/setup-roles.js --network localhost",
+    "test": "hardhat test",
+    "dev": "vite ./frontend",
+    "build": "vite build ./frontend"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
@@ -34,6 +37,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "ethers": "^6.13.4",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "vite": "^6.0.6"
   }
 }

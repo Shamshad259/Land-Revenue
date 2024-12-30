@@ -37,20 +37,10 @@ contract LandManagement {
         string landTitle;
         bool protectedStatus;  // renamed from isProtected
         bool exists;
-        uint256 taxAmount;
         uint256 ownershipStartTime;
         string[] previousOwners;
         uint256 marketValue;
         string geoLocation;
-        mapping(uint256 => TaxPayment) taxHistory;
-        uint256 taxPaymentCount;
-    }
-
-    // Tax payments
-    struct TaxPayment {
-        uint256 amount;
-        uint256 timestamp;
-        bool isPaid;
     }
 
     // Sale Request
@@ -115,7 +105,6 @@ contract LandManagement {
     event DeathTransferFinalized(uint256 indexed thandaperNumber, address indexed beneficiary);
     event LandTypeChangeRequested(uint256 indexed thandaperNumber, LandType newLandType);
     event LandTypeChangeApproved(uint256 indexed thandaperNumber, LandType newLandType);
-    event TaxPaid(uint256 indexed thandaperNumber, address indexed payer, uint256 amount);
         // Events for security operations
     event UserRegistered(address indexed user, string govId);
     event AccountBlocked(address indexed user, uint256 timestamp);
@@ -149,10 +138,6 @@ contract LandManagement {
         _;
     }
 
-    modifier isValidTaxAmount(uint256 thandaperNumber, uint256 amount) {
-        require(lands[thandaperNumber].taxAmount == amount, "Invalid tax amount");
-        _;
-    }
      // New modifiers
     modifier notBlocked(address user) {
         require(!userIdentities[user].isBlocked, "Account is blocked");
@@ -162,6 +147,19 @@ contract LandManagement {
     modifier onlyVerifiedUser() {
         require(userIdentities[msg.sender].isVerified, "User not verified");
         _;
+    }
+
+    // Add this modifier
+    modifier onlyChiefSecretary() {
+        require(userRoles[msg.sender] == Roles.ChiefSecretary, "Only Chief Secretary can perform this action");
+        _;
+    }
+
+    // Add this function for setting roles
+    function setUserRole(address user, Roles role) public onlyChiefSecretary {
+        require(user != address(0), "Invalid address");
+        require(userIdentities[user].isVerified, "User not registered");
+        userRoles[user] = role;
     }
 
     // Core functionality: Register new land
@@ -175,7 +173,6 @@ contract LandManagement {
         LandType landType,
         string memory landTitle,
         bool protectedStatus,
-        uint256 taxAmount,
         string memory geoLocation,
         uint256 marketValue
     ) public onlyRole(Roles.SubRegistrar) {
@@ -192,7 +189,6 @@ contract LandManagement {
         newLand.landTitle = landTitle;
         newLand.protectedStatus = protectedStatus;
         newLand.exists = true;
-        newLand.taxAmount = taxAmount;
         newLand.ownershipStartTime = block.timestamp;
         newLand.geoLocation = geoLocation;
         newLand.marketValue = marketValue;
@@ -218,7 +214,6 @@ contract LandManagement {
             LandType landType,
             string memory landTitle,
             bool protectedStatus,
-            uint256 taxAmount,
             uint256 ownershipStartTime,
             string memory geoLocation,
             uint256 marketValue
@@ -235,7 +230,6 @@ contract LandManagement {
             land.landType,
             land.landTitle,
             land.protectedStatus,
-            land.taxAmount,
             land.ownershipStartTime,
             land.geoLocation,
             land.marketValue
@@ -253,6 +247,11 @@ contract LandManagement {
         newUser.isBlocked = false;
         
         govIdToAddress[govId] = msg.sender;
+        
+        // Always set new registrations to LandOwner role unless they already have a role
+        if (userRoles[msg.sender] == Roles.None) {
+            userRoles[msg.sender] = Roles.LandOwner;
+        }
         
         emit UserRegistered(msg.sender, govId);
     }
@@ -476,18 +475,6 @@ function completeRecovery(
         land.owner = request.beneficiary;
 
         emit DeathTransferFinalized(thandaperNumber, request.beneficiary);
-    }
-
-    // Tax Payment
-    function payTax(
-        uint256 thandaperNumber,
-        uint256 amount
-    ) public isValidTaxAmount(thandaperNumber, amount) notBlocked(msg.sender) onlyVerifiedUser{
-        Land storage land = lands[thandaperNumber];
-        require(land.owner == msg.sender, "You are not the owner");
-
-        // Tax payment logic
-        emit TaxPaid(thandaperNumber, msg.sender, amount);
     }
 
     // Protected Land Type Change

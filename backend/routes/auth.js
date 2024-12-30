@@ -1,4 +1,3 @@
-// routes/auth.js
 import express from 'express';
 import { ethers } from 'ethers';
 import jwt from 'jsonwebtoken';
@@ -14,55 +13,63 @@ router.get('/auth-message', (req, res) => {
     res.json({ message: AUTH_MESSAGE });
 });
 
-// Login
 router.post('/login', async (req, res) => {
     try {
         const { walletAddress, signature } = req.body;
-        const signerAddress = ethers.verifyMessage(AUTH_MESSAGE, signature);
-        if (signerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-            throw new Error('Invalid signature');
-        }
-
-        // Check if user is registered and not blocked
-        const userIdentity = await contract.userIdentities(walletAddress);
-        if (!userIdentity.isVerified) {
-            throw new Error('User not registered');
-        }
-        if (userIdentity.isBlocked) {
-            throw new Error('User is blocked');
-        }
-
-        const userRole = await contract.userRoles(walletAddress);
-
-        const token = jwt.sign(
-            { 
-                walletAddress: walletAddress,
-                govId: userIdentity.governmentId,
-                role: userRole.toNumber()
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
-        res.json({ 
-            success: true,
-            data: {
-                token,
-                walletAddress,
-                role: userRole.toNumber()
+        
+        try {
+            const recoveredAddress = ethers.utils.verifyMessage(AUTH_MESSAGE, signature);
+            
+            if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+                return res.status(401).json({ error: 'Invalid signature' });
             }
-        });
+        } catch (error) {
+            return res.status(401).json({ error: 'Invalid signature' });
+        }
+
+        try {
+            const userIdentity = await contract.userIdentities(walletAddress);
+
+            if (!userIdentity.isVerified) {
+                return res.status(401).json({ error: 'User not registered' });
+            }
+
+            if (userIdentity.isBlocked) {
+                return res.status(401).json({ error: 'User is blocked' });
+            }
+
+            const userRole = await contract.userRoles(walletAddress);
+
+            const token = jwt.sign(
+                { 
+                    walletAddress: walletAddress.toLowerCase(),
+                    govId: userIdentity.governmentId,
+                    role: userRole.toString()
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            return res.json({ 
+                success: true,
+                data: {
+                    token,
+                    walletAddress: walletAddress.toLowerCase(),
+                    role: userRole.toString()
+                }
+            });
+        } catch (error) {
+            return res.status(500).json({ error: 'Failed to verify user status' });
+        }
     } catch (error) {
         res.status(401).json({ error: error.message });
     }
 });
 
-// Register User
 router.post("/register", async (req, res) => {
     try {
         const { walletAddress, govId } = req.body;
         
-        // Input validation
         if (!walletAddress || !govId) {
             return res.status(400).json({ 
                 success: false, 
@@ -70,7 +77,6 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        // Validate wallet address format
         if (!ethers.utils.isAddress(walletAddress)) {
             return res.status(400).json({
                 success: false,
@@ -79,7 +85,6 @@ router.post("/register", async (req, res) => {
         }
 
         try {
-            // Check if user is already registered
             const userIdentity = await contract.userIdentities(walletAddress);
             console.log("User Identity:", userIdentity);
             
@@ -97,7 +102,6 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        // Prepare transaction data
         const txData = {
             methodName: "registerUser",
             params: [govId],
@@ -119,7 +123,6 @@ router.post("/register", async (req, res) => {
     }
 });
 
-// Block User
 router.post("/block", auth, async (req, res) => {
     try {
         const { govId } = req.body;
@@ -137,7 +140,6 @@ router.post("/block", auth, async (req, res) => {
     }
 });
 
-// Unblock User
 router.post("/unblock", auth, async (req, res) => {
     try {
         const { userAddress } = req.body;
@@ -155,7 +157,6 @@ router.post("/unblock", auth, async (req, res) => {
     }
 });
 
-// Add Trusted Contact
 router.post("/add-trusted-contact", auth, async (req, res) => {
     try {
         const { contact } = req.body;
@@ -173,7 +174,6 @@ router.post("/add-trusted-contact", auth, async (req, res) => {
     }
 });
 
-// Initiate Account Recovery
 router.post("/initiate-recovery", async (req, res) => {
     try {
         const { govId, newAddress, backupHash } = req.body;
@@ -191,7 +191,6 @@ router.post("/initiate-recovery", async (req, res) => {
     }
 });
 
-// Complete Account Recovery
 router.post("/complete-recovery", auth, async (req, res) => {
     try {
         const { govId, oldAddress, newAddress } = req.body;
@@ -209,7 +208,6 @@ router.post("/complete-recovery", auth, async (req, res) => {
     }
 });
 
-// Logout (optional - can be handled client-side by removing the token)
 router.post('/logout', auth, (req, res) => {
     res.json({ 
         success: true, 
@@ -217,7 +215,6 @@ router.post('/logout', auth, (req, res) => {
     });
 });
 
-// Get User Profile
 router.get('/profile', auth, async (req, res) => {
     try {
         const userIdentity = await contract.userIdentities(req.user.walletAddress);
@@ -227,11 +224,7 @@ router.get('/profile', auth, async (req, res) => {
             success: true,
             data: {
                 walletAddress: req.user.walletAddress,
-                govId: userIdentity.governmentId,
-                isVerified: userIdentity.isVerified,
-                isBlocked: userIdentity.isBlocked,
-                role: userRole.toNumber()
-            }
+                govId: userIdentity.governmentId,                isVerified: userIdentity.isVerified,                isBlocked: userIdentity.isBlocked,                role: userRole.toNumber()            }
         });
     } catch (e) {
         res.status(400).send({ error: e.message });

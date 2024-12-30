@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import abi from '../constants/ABI.json';
 
 // Hardhat network configuration
 const HARDHAT_NETWORK = {
@@ -37,9 +38,8 @@ export const WalletProvider = ({ children }) => {
     // Initialize contract
     const initializeContract = async (provider) => {
         try {
-            // Replace with your contract address and ABI
-            const contractAddress = "YOUR_CONTRACT_ADDRESS";
-            const contractABI = []; // Your contract ABI here
+            const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+            const contractABI = abi.abi;
             
             const contract = new ethers.Contract(
                 contractAddress,
@@ -89,8 +89,10 @@ export const WalletProvider = ({ children }) => {
     const fetchUserRole = async (address, contract) => {
         try {
             const roleNumber = await contract.userRoles(address);
+            // Convert to number - in ethers v6, contract calls return native bigint
+            const roleValue = Number(roleNumber);
             const role = Object.keys(Roles).find(
-                key => Roles[key] === roleNumber.toNumber()
+                key => Roles[key] === roleValue
             );
             setUserRole(role);
             return role;
@@ -110,10 +112,8 @@ export const WalletProvider = ({ children }) => {
                 throw new Error("Please install MetaMask");
             }
 
-            // Switch to Hardhat network
             await switchToHardhatNetwork();
 
-            // Request account access
             const accounts = await window.ethereum.request({
                 method: "eth_requestAccounts"
             });
@@ -121,11 +121,10 @@ export const WalletProvider = ({ children }) => {
             const address = accounts[0];
             setWalletAddress(address);
 
-            // Initialize provider and contract
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            const contractInstance = await initializeContract(provider);
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contractInstance = await initializeContract(signer);
 
-            // Fetch user role
             await fetchUserRole(address, contractInstance);
 
             return address;

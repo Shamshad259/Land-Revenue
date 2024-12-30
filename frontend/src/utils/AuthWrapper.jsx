@@ -2,7 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useWallet } from '../context/WalletContext';
 
 const AuthWrapper = ({ children }) => {
-    const { walletAddress } = useWallet();
+    const walletAddress = localStorage.getItem('walletAddress');
     const token = localStorage.getItem('token');
     const location = useLocation();
 
