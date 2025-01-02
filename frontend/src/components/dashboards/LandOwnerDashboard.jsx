@@ -290,7 +290,7 @@ const LandOwnerDashboard = () => {
         setError(null);
         try {
             const tx = await contract.initiateSaleRequest(
-                ethers.BigNumber.from(formData.thandaperNumber),
+                ethers.getBigInt(formData.thandaperNumber),
                 formData.buyer
             );
             await tx.wait();
@@ -300,6 +300,7 @@ const LandOwnerDashboard = () => {
         } catch (error) {
             console.error("Sale initiation error:", error);
             setError(error.message);
+            alert(`Failed to initiate sale: ${error.message}`);
         }
     };
 
@@ -477,13 +478,15 @@ const getSaleStatus = (sale) => {
                                 <tr key={sale.thandaperNumber}>
                                     <td style={styles.td}>{sale.thandaperNumber}</td>
                                     <td style={styles.td}>
-                                        {`${sale?.buyer?.slice(0, 6)}...${sale?.buyer?.slice(-4)}`}
+                                        {sale.saleStatus && sale.saleStatus.buyer ? 
+                                            `${sale.saleStatus.buyer.slice(0, 6)}...${sale.saleStatus.buyer.slice(-4)}` 
+                                            : 'N/A'}
                                     </td>
                                     <td style={styles.td}>
                                         {getSaleStatus(sale)}
                                     </td>
                                     <td style={styles.td}>
-                                        {!sale.sellerConfirmed && (
+                                        {!sale.saleStatus.sellerConfirmed && (
                                             <button
                                                 onClick={() => handleConfirmSale(sale.thandaperNumber)}
                                                 style={{...styles.button.base, ...styles.button.green}}

@@ -279,50 +279,69 @@ const OfficialDashboard = () => {
             };
         }
     }, [contract, userRole]);
-    const fetchPendingActions = async () => {
-        if (!contract) return;
-    
-        try {
-            setLoading(true);
-            
-            // For Registrar - Fetch Pending Sales
-            if (userRole === 'Registrar') {
-                const landIds = await contract.getLands();
-                
-                const salesPromises = landIds.map(async (landId) => {
-                    try {
-                        const sale = await contract.saleRequests(landId);
+const fetchPendingActions = async () => {
+    if (!contract) return;
+
+    try {
+        setLoading(true);
+        
+        // For Registrar - Fetch Pending Sales
+        if (userRole === 'Registrar') {
+            // First, get all lands
+            const landIds = await contract.getLands();
+            console.log("Found lands:", landIds);
+
+            const salesPromises = landIds.map(async (landId) => {
+                try {
+                    const sale = await contract.saleRequests(landId);
+                    console.log(`Sale request for land ${landId}:`, sale);
+                    
+                    // Check if this is a valid sale request that needs registrar approval
+                    if (sale && 
+                        sale.buyer !== ethers.ZeroAddress && 
+                        sale.sellerConfirmed && 
+                        sale.buyerConfirmed && 
+                        !sale.registrarApproved) {
                         
-                        // Only return valid sale requests that need registrar approval
-                        if (sale.buyer !== ethers.ZeroAddress && 
-                            sale.sellerConfirmed && 
-                            sale.buyerConfirmed && 
-                            !sale.registrarApproved) {
-                            
-                            return {
-                                thandaperNumber: landId.toString(),
-                                seller: sale.seller,
-                                buyer: sale.buyer,
-                                sellerConfirmed: sale.sellerConfirmed,
-                                buyerConfirmed: sale.buyerConfirmed
-                            };
-                        }
-                    } catch (error) {
-                        console.error(`Error fetching sale request for land ${landId}:`, error);
+                        // Get land details
+                        const landDetails = await contract.getLandDetails(landId);
+                        
+                        return {
+                            thandaperNumber: landId.toString(),
+                            seller: sale.seller,
+                            buyer: sale.buyer,
+                            sellerConfirmed: sale.sellerConfirmed,
+                            buyerConfirmed: sale.buyerConfirmed,
+                            landTitle: landDetails[5], // Add land title
+                            area: landDetails[4].toString(), // Add area
+                            village: landDetails[2] // Add village
+                        };
                     }
-                    return null;
-                });
-    
-                const sales = (await Promise.all(salesPromises)).filter(sale => sale !== null);
-                setPendingActions(prev => ({ ...prev, sales }));
-            }
-    
-        } catch (error) {
-            console.error("Error fetching pending actions:", error);
-        } finally {
-            setLoading(false);
+                } catch (error) {
+                    console.error(`Error fetching sale request for land ${landId}:`, error);
+                }
+                return null;
+            });
+
+            const sales = (await Promise.all(salesPromises)).filter(sale => sale !== null);
+            console.log("Filtered sales:", sales);
+            setPendingActions(prev => ({ ...prev, sales }));
         }
-    };
+
+    } catch (error) {
+        console.error("Error fetching pending actions:", error);
+        alert("Error fetching pending actions: " + error.message);
+    } finally {
+        setLoading(false);
+    }
+};
+
+// Add useEffect to fetch pending actions on component mount
+useEffect(() => {
+    if (contract && userRole === 'Registrar') {
+        fetchPendingActions();
+    }
+}, [contract, userRole]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -352,6 +371,11 @@ const OfficialDashboard = () => {
     const handleRegisterLand = async (e) => {
         e.preventDefault();
         try {
+            // Check if the user has the Registrar role
+            if (userRole !== 'Registrar') {
+                throw new Error("Access denied: Only Registrar can register land");
+            }
+
             const tx = await contract.registerLand(
                 ethers.getBigInt(formData.thandaperNumber),
                 formData.owner,
@@ -367,6 +391,11 @@ const OfficialDashboard = () => {
             setShowRegisterForm(false);
         } catch (error) {
             console.error("Error registering land:", error);
+            if (error.code === 'CALL_EXCEPTION' && error.reason === 'Access denied') {
+                alert("Access denied: You do not have permission to register land.");
+            } else {
+                alert(`Failed to register land: ${error.message}`);
+            }
         }
     };
 
@@ -768,4 +797,4 @@ const OfficialDashboard = () => {
     );
 };
 
-export default OfficialDashboard;
+export default OfficialDashboard;   

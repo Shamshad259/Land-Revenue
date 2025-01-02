@@ -69,3 +69,6 @@ WalletContext.jsx
 Run the role setup script:
 Start your backend server:
 In your frontend directory, start the frontend:
+
+
+lift response repeat bind winter yellow minute buyer olympic market guilt kiwi
