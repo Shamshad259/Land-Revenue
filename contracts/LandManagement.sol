@@ -61,6 +61,9 @@ contract LandManagement {
     mapping(string => address) private govIdToAddress;
     mapping(string => RecoveryRequest) private recoveryRequests;
 
+    // Keep track of all registered land IDs
+    uint256[] private allLandIds;
+
     // Events
     event LandRegistered(uint256 indexed thandaperNumber, address indexed owner);
     event SaleRequested(uint256 indexed thandaperNumber, address indexed seller, address indexed buyer);
@@ -157,6 +160,7 @@ contract LandManagement {
         newLand.previousOwners = new address[](0); // Initialize the array
 
         userOwnedLands[owner].push(thandaperNumber);
+        allLandIds.push(thandaperNumber);
         emit LandRegistered(thandaperNumber, owner);
     }
 
@@ -191,6 +195,16 @@ contract LandManagement {
             land.geoLocation,
             land.marketValue
         );
+    }
+
+    // Add new function to get all lands
+    function getLands() public view returns (uint256[] memory) {
+        return allLandIds;
+    }
+
+    // Add this new function before the Sale Functions section
+    function isGovIdRegistered(string memory govId) public view returns (bool) {
+        return govIdToAddress[govId] != address(0);
     }
 
     // Sale Functions

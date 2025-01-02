@@ -287,24 +287,28 @@ const OfficialDashboard = () => {
             
             // For Registrar - Fetch Pending Sales
             if (userRole === 'Registrar') {
-                // We'll need to fetch all lands and check their sale requests
-                const allLands = await contract.getLands(); // You might need to implement this getter in your contract
-                const salesPromises = allLands.map(async (landId) => {
-                    const saleRequest = await contract.saleRequests(landId);
-                    
-                    // Only return valid sale requests that need registrar approval
-                    if (saleRequest.buyer !== ethers.ZeroAddress && 
-                        saleRequest.sellerConfirmed && 
-                        saleRequest.buyerConfirmed && 
-                        !saleRequest.registrarApproved) {
+                const landIds = await contract.getLands();
+                
+                const salesPromises = landIds.map(async (landId) => {
+                    try {
+                        const sale = await contract.saleRequests(landId);
                         
-                        return {
-                            thandaperNumber: landId.toString(),
-                            seller: saleRequest.seller,
-                            buyer: saleRequest.buyer,
-                            sellerConfirmed: saleRequest.sellerConfirmed,
-                            buyerConfirmed: saleRequest.buyerConfirmed
-                        };
+                        // Only return valid sale requests that need registrar approval
+                        if (sale.buyer !== ethers.ZeroAddress && 
+                            sale.sellerConfirmed && 
+                            sale.buyerConfirmed && 
+                            !sale.registrarApproved) {
+                            
+                            return {
+                                thandaperNumber: landId.toString(),
+                                seller: sale.seller,
+                                buyer: sale.buyer,
+                                sellerConfirmed: sale.sellerConfirmed,
+                                buyerConfirmed: sale.buyerConfirmed
+                            };
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching sale request for land ${landId}:`, error);
                     }
                     return null;
                 });
@@ -313,9 +317,9 @@ const OfficialDashboard = () => {
                 setPendingActions(prev => ({ ...prev, sales }));
             }
     
-            setLoading(false);
         } catch (error) {
             console.error("Error fetching pending actions:", error);
+        } finally {
             setLoading(false);
         }
     };
