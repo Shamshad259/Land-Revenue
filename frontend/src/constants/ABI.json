@@ -51,76 +51,6 @@
           "internalType": "uint256",
           "name": "thandaperNumber",
           "type": "uint256"
-        }
-      ],
-      "name": "DeathTransferApprovedByAnonymousRegistrar",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "beneficiary",
-          "type": "address"
-        }
-      ],
-      "name": "DeathTransferApprovedByBeneficiary",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "beneficiary",
-          "type": "address"
-        }
-      ],
-      "name": "DeathTransferFinalized",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "beneficiary",
-          "type": "address"
-        }
-      ],
-      "name": "DeathTransferInitiated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
         },
         {
           "indexed": true,
@@ -137,42 +67,10 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
+          "internalType": "string",
+          "name": "govId",
+          "type": "string"
         },
-        {
-          "indexed": false,
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "LandTypeChangeApproved",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "LandTypeChangeRequested",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
         {
           "indexed": true,
           "internalType": "address",
@@ -194,15 +92,15 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
+          "internalType": "string",
+          "name": "govId",
+          "type": "string"
         },
         {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
+          "indexed": true,
+          "internalType": "address",
+          "name": "newAddress",
+          "type": "address"
         }
       ],
       "name": "RecoveryRequested",
@@ -220,11 +118,11 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "seniorRegistrar",
+          "name": "registrar",
           "type": "address"
         }
       ],
-      "name": "SaleApprovedBySeniorRegistrar",
+      "name": "SaleApprovedByRegistrar",
       "type": "event"
     },
     {
@@ -295,44 +193,6 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "registrar",
-          "type": "address"
-        }
-      ],
-      "name": "SaleVerifiedByRegistrar",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "contact",
-          "type": "address"
-        }
-      ],
-      "name": "TrustedContactAdded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
           "internalType": "address",
           "name": "user",
           "type": "address"
@@ -350,12 +210,12 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "contact",
-          "type": "address"
+          "internalType": "string",
+          "name": "govId",
+          "type": "string"
         }
       ],
-      "name": "addTrustedContact",
+      "name": "approveRecovery",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -368,69 +228,7 @@
           "type": "uint256"
         }
       ],
-      "name": "approveDeathTransferByAnonymousRegistrar",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        }
-      ],
-      "name": "approveDeathTransferByBeneficiary",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "approveNonProtectedLandTypeChange",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "approveProtectedLandTypeChange",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        }
-      ],
-      "name": "approveSaleBySeniorRegistrar",
+      "name": "approveSaleByRegistrar",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -444,29 +242,6 @@
         }
       ],
       "name": "blockAccount",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "govId",
-          "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "oldAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "newAddress",
-          "type": "address"
-        }
-      ],
-      "name": "completeRecovery",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -493,76 +268,6 @@
         }
       ],
       "name": "confirmSaleBySeller",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "deathTransferRequests",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "beneficiary",
-          "type": "address"
-        },
-        {
-          "internalType": "bool",
-          "name": "beneficiaryApproved",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "anonymousRegistrarApproved",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "seniorRegistrarApproved",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        }
-      ],
-      "name": "finalizeDeathTransfer",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "finalizeProtectedLandTypeChange",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -603,19 +308,9 @@
           "type": "uint256"
         },
         {
-          "internalType": "enum LandManagement.LandType",
-          "name": "landType",
-          "type": "uint8"
-        },
-        {
           "internalType": "string",
           "name": "landTitle",
           "type": "string"
-        },
-        {
-          "internalType": "bool",
-          "name": "protectedStatus",
-          "type": "bool"
         },
         {
           "internalType": "uint256",
@@ -658,37 +353,9 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "beneficiary",
-          "type": "address"
-        }
-      ],
-      "name": "initiateDeathTransfer",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "string",
           "name": "govId",
           "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "newAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "backupHash",
-          "type": "bytes32"
         }
       ],
       "name": "initiateRecovery",
@@ -755,19 +422,9 @@
           "type": "uint256"
         },
         {
-          "internalType": "enum LandManagement.LandType",
-          "name": "landType",
-          "type": "uint8"
-        },
-        {
           "internalType": "string",
           "name": "landTitle",
           "type": "string"
-        },
-        {
-          "internalType": "bool",
-          "name": "protectedStatus",
-          "type": "bool"
         },
         {
           "internalType": "bool",
@@ -826,19 +483,9 @@
           "type": "uint256"
         },
         {
-          "internalType": "enum LandManagement.LandType",
-          "name": "landType",
-          "type": "uint8"
-        },
-        {
           "internalType": "string",
           "name": "landTitle",
           "type": "string"
-        },
-        {
-          "internalType": "bool",
-          "name": "protectedStatus",
-          "type": "bool"
         },
         {
           "internalType": "string",
@@ -865,42 +512,6 @@
         }
       ],
       "name": "registerUser",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "requestNonProtectedLandTypeChange",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum LandManagement.LandType",
-          "name": "newLandType",
-          "type": "uint8"
-        }
-      ],
-      "name": "requestProtectedLandTypeChange",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -942,12 +553,7 @@
         },
         {
           "internalType": "bool",
-          "name": "registrarVerified",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "seniorRegistrarApproved",
+          "name": "registrarApproved",
           "type": "bool"
         }
       ],
@@ -1009,21 +615,6 @@
           "internalType": "bool",
           "name": "isBlocked",
           "type": "bool"
-        },
-        {
-          "internalType": "address",
-          "name": "recoveryAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "backupHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "lastBlockTime",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1046,19 +637,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "thandaperNumber",
-          "type": "uint256"
-        }
-      ],
-      "name": "verifySaleByRegistrar",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     }
   ]

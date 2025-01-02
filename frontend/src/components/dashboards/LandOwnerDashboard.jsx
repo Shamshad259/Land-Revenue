@@ -1,377 +1,453 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '../../context/WalletContext';
 import { ethers } from 'ethers';
-import axios from 'axios';
+import { debounce } from 'lodash';
+
+
+const styles = {
+    container: {
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '1.5rem'
+    },
+    header: {
+        marginBottom: '2rem'
+    },
+    headerTitle: {
+        fontSize: '1.875rem',
+        fontWeight: 'bold',
+        color: '#1f2937'
+    },
+    headerSubtitle: {
+        color: '#4b5563',
+        marginTop: '0.5rem'
+    },
+    buttonSection: {
+        marginBottom: '1rem'
+    },
+    button: {
+        base: {
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s'
+        },
+        green: {
+            backgroundColor: '#22c55e',
+            color: 'white',
+            '&:hover': {
+                backgroundColor: '#16a34a'
+            }
+        },
+        blue: {
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            marginRight: '0.5rem',
+            '&:hover': {
+                backgroundColor: '#2563eb'
+            }
+        },
+        gray: {
+            backgroundColor: '#6b7280',
+            color: 'white',
+            '&:hover': {
+                backgroundColor: '#4b5563'
+            }
+        }
+    },
+    form: {
+        marginBottom: '2rem',
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        borderRadius: '0.5rem',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+    },
+    formTitle: {
+        fontSize: '1.25rem',
+        fontWeight: '600',
+        marginBottom: '1rem'
+    },
+    formGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '1rem'
+    },
+    input: {
+        width: '100%',
+        padding: '0.5rem',
+        border: '1px solid #d1d5db',
+        borderRadius: '0.375rem',
+        '&:focus': {
+            outline: 'none',
+            borderColor: '#3b82f6',
+            boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)'
+        }
+    },
+    section: {
+        backgroundColor: 'white',
+        borderRadius: '0.5rem',
+        padding: '1.5rem',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+        marginBottom: '1.5rem'
+    },
+    sectionTitle: {
+        fontSize: '1.25rem',
+        fontWeight: '600',
+        marginBottom: '1rem'
+    },
+    table: {
+        width: '100%',
+        backgroundColor: 'white',
+        borderCollapse: 'collapse'
+    },
+    th: {
+        padding: '0.5rem',
+        textAlign: 'left',
+        borderBottom: '1px solid #e5e7eb'
+    },
+    td: {
+        padding: '0.5rem',
+        textAlign: 'left',
+        borderBottom: '1px solid #e5e7eb'
+    },
+    emptyText: {
+        color: '#6b7280'
+    },
+    loadingText: {
+        color: '#6b7280',
+        textAlign: 'center',
+        padding: '1rem'
+    }
+};
+
 
 const LandOwnerDashboard = () => {
-    // Land type enum to match smart contract
-    const LandTypes = {
-        'Agricultural': 0,
-        'Forest': 1,
-        'Urban': 2,
-        'Rural': 3,
-        'Coastal': 4,
-        'Wetland': 5,
-        'Government': 6
-    };
-
     const { contract, walletAddress } = useWallet();
     const [lands, setLands] = useState([]);
+    const [pendingSales, setPendingSales] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showRegisterForm, setShowRegisterForm] = useState(false);
     const [showSaleForm, setShowSaleForm] = useState(false);
     const [formData, setFormData] = useState({
         thandaperNumber: '',
-        owner: walletAddress,
-        taluk: '',
-        village: '',
-        surveyNumber: '',
-        area: '',
-        landType: 'Agricultural',
-        landTitle: '',
-        protectedStatus: false,
-        geoLocation: '',
-        marketValue: '',
         buyer: ''
     });
+    const [error, setError] = useState(null);
+
+    // Debounced fetch function to prevent too many calls
+    const debouncedFetch = debounce(async () => {
+        try {
+            if (!contract || !walletAddress) {
+                setError("Wallet not connected");
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            // Get owned lands
+            const ownedLandIds = await contract.getOwnedLands(walletAddress);
+            
+            // Fetch details for owned lands
+            const ownedLandsPromises = ownedLandIds.map(async (id) => {
+                try {
+                    const [landDetails, saleRequest] = await Promise.all([
+                        contract.getLandDetails(id),
+                        contract.saleRequests(id)
+                    ]);
+
+                    return {
+                        thandaperNumber: id.toString(),
+                        owner: landDetails[0],
+                        taluk: landDetails[1],
+                        village: landDetails[2],
+                        surveyNumber: landDetails[3].toString(),
+                        area: landDetails[4].toString(),
+                        landTitle: landDetails[5],
+                        ownershipStartTime: new Date(Number(landDetails[6]) * 1000),
+                        geoLocation: landDetails[7],
+                        marketValue: landDetails[8].toString(),
+                        saleStatus: {
+                            inProgress: saleRequest && saleRequest.buyer !== ethers.ZeroAddress,
+                            buyer: saleRequest?.buyer || ethers.ZeroAddress,
+                            seller: saleRequest?.seller || ethers.ZeroAddress,
+                            sellerConfirmed: saleRequest?.sellerConfirmed || false,
+                            buyerConfirmed: saleRequest?.buyerConfirmed || false,
+                            registrarApproved: saleRequest?.registrarApproved || false
+                        }
+                    };
+                } catch (error) {
+                    console.warn(`Error fetching land ${id}:`, error);
+                    return null;
+                }
+            });
+
+            // Get all lands to check for pending purchases
+            const maxLandId = 100; // Adjust based on your needs
+            const allLandsPromises = Array.from({ length: maxLandId }, async (_, i) => {
+                const id = i + 1;
+                try {
+                    const saleRequest = await contract.saleRequests(id);
+                    if (saleRequest.buyer.toLowerCase() === walletAddress.toLowerCase()) {
+                        const landDetails = await contract.getLandDetails(id);
+                        return {
+                            thandaperNumber: id.toString(),
+                            owner: landDetails[0],
+                            taluk: landDetails[1],
+                            village: landDetails[2],
+                            surveyNumber: landDetails[3].toString(),
+                            area: landDetails[4].toString(),
+                            landTitle: landDetails[5],
+                            ownershipStartTime: new Date(Number(landDetails[6]) * 1000),
+                            geoLocation: landDetails[7],
+                            marketValue: landDetails[8].toString(),
+                            saleStatus: {
+                                inProgress: true,
+                                buyer: saleRequest.buyer,
+                                seller: saleRequest.seller,
+                                sellerConfirmed: saleRequest.sellerConfirmed,
+                                buyerConfirmed: saleRequest.buyerConfirmed,
+                                registrarApproved: saleRequest.registrarApproved
+                            }
+                        };
+                    }
+                    return null;
+                } catch (error) {
+                    // Ignore errors for non-existent lands
+                    return null;
+                }
+            });
+
+            const [ownedLands, allLands] = await Promise.all([
+                Promise.all(ownedLandsPromises),
+                Promise.all(allLandsPromises)
+            ]);
+
+            const validOwnedLands = ownedLands.filter(land => land !== null);
+            const pendingPurchases = allLands.filter(land => land !== null);
+
+            setLands(validOwnedLands);
+            setPendingSales([
+                ...validOwnedLands.filter(land => land.saleStatus.inProgress),
+                ...pendingPurchases
+            ]);
+
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    }, 1000); // 1 second debounce
 
     useEffect(() => {
-        const fetchLands = async () => {
-            try {
-                const response = await axios.get(`/api/land/owned-lands/${walletAddress}`, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
+        if (contract && walletAddress) {
+            debouncedFetch();
+
+            const eventNames = [
+                'LandRegistered',
+                'SaleRequested',
+                'SaleConfirmedBySeller',
+                'SaleConfirmedByBuyer',
+                'SaleApprovedByRegistrar'
+            ];
+
+            const listeners = eventNames.map(eventName => {
+                try {
+                    const filter = contract.filters[eventName]();
+                    const listener = (...args) => {
+                        console.log(`${eventName} event detected`);
+                        debouncedFetch();
+                    };
+                    contract.on(filter, listener);
+                    return { filter, listener };
+                } catch (error) {
+                    console.warn(`Error setting up ${eventName} listener:`, error);
+                    return null;
+                }
+            }).filter(Boolean);
+
+            return () => {
+                debouncedFetch.cancel();
+                listeners.forEach(({ filter, listener }) => {
+                    try {
+                        contract.off(filter, listener);
+                    } catch (error) {
+                        console.warn("Error removing listener:", error);
                     }
                 });
-                const landIds = response.data.data;
-                const landPromises = landIds.map(id => axios.get(`/api/land/details/${id}`, {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
-                }));
-                const landsData = await Promise.all(landPromises);
-                setLands(landsData.map(res => res.data.data));
-            } catch (error) {
-                console.error("Error fetching lands:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (contract && walletAddress) {
-            fetchLands();
+            };
         }
     }, [contract, walletAddress]);
 
     const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    const validateNumericInput = (value, fieldName) => {
-        if (value.trim() === '') {
-            throw new Error(`${fieldName} cannot be empty`);
-        }
-        if (isNaN(value) || Number(value) < 0) {
-            throw new Error(`${fieldName} must be a valid positive number`);
-        }
-    };
-
-    const handleRegisterLand = async (e) => {
-        e.preventDefault();
-        try {
-            if (!contract) {
-                throw new Error("Contract not initialized");
-            }
-
-            // Validate all numeric inputs
-            validateNumericInput(formData.thandaperNumber, 'Thandaper Number');
-            validateNumericInput(formData.surveyNumber, 'Survey Number');
-            validateNumericInput(formData.area, 'Area');
-            validateNumericInput(formData.marketValue, 'Market Value');
-
-            // Convert string values to the appropriate types
-            const processedData = {
-                thandaperNumber: ethers.getBigInt(formData.thandaperNumber), // uint256
-                owner: formData.owner, // address
-                taluk: formData.taluk, // string
-                village: formData.village, // string
-                surveyNumber: ethers.getBigInt(formData.surveyNumber), // uint256
-                area: ethers.parseUnits(formData.area, 'ether'), // uint256
-                landType: LandTypes[formData.landType], // enum as number
-                landTitle: formData.landTitle, // string
-                protectedStatus: Boolean(formData.protectedStatus), // bool
-                geoLocation: formData.geoLocation, // string
-                marketValue: ethers.parseUnits(formData.marketValue, 'ether') // uint256
-            };
-
-            console.log("Sending data to contract:", processedData);
-
-            const tx = await contract.registerLand(
-                processedData.thandaperNumber,
-                processedData.owner,
-                processedData.taluk,
-                processedData.village,
-                processedData.surveyNumber,
-                processedData.area,
-                processedData.landType,
-                processedData.landTitle,
-                processedData.protectedStatus,
-                processedData.geoLocation,
-                processedData.marketValue
-            );
-
-            const receipt = await tx.wait();
-
-            // Send the transaction hash to the backend
-            const response = await axios.post('http://localhost:5000/api/land/register', {
-                transactionHash: receipt.hash,
-                landData: formData
-            }, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            console.log("Land registered successfully:", response.data);
-            
-            // Reset form
-            setFormData({
-                thandaperNumber: '',
-                owner: walletAddress,
-                taluk: '',
-                village: '',
-                surveyNumber: '',
-                area: '',
-                landType: 'Agricultural',
-                landTitle: '',
-                protectedStatus: false,
-                geoLocation: '',
-                marketValue: '',
-                buyer: ''
-            });
-            setShowRegisterForm(false);
-            // Refresh lands list
-            fetchLands();
-        } catch (error) {
-            console.error("Error registering land:", error);
-            // You might want to show this error to the user in your UI
-        }
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleInitiateSale = async (e) => {
         e.preventDefault();
+        setError(null);
         try {
-            const response = await axios.post('http://localhost:5000/api/land/sale/initiate', {
-                thandaperNumber: formData.thandaperNumber,
-                buyer: formData.buyer
-            }, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            console.log(response.data);
-            // Handle successful sale initiation
+            const tx = await contract.initiateSaleRequest(
+                ethers.BigNumber.from(formData.thandaperNumber),
+                formData.buyer
+            );
+            await tx.wait();
+            setFormData({ thandaperNumber: '', buyer: '' });
+            setShowSaleForm(false);
+            debouncedFetch();
         } catch (error) {
-            console.error("Error initiating sale:", error);
+            console.error("Sale initiation error:", error);
+            setError(error.message);
+        }
+    };
+
+    const handleConfirmSale = async (thandaperNumber) => {
+        setError(null);
+        try {
+            const tx = await contract.confirmSaleBySeller(thandaperNumber);
+            await tx.wait();
+            debouncedFetch();
+        } catch (error) {
+            console.error("Sale confirmation error:", error);
+            setError(error.message);
+        }
+    };
+    // Add this function before the return statement
+const getSaleStatus = (sale) => {
+    if (!sale || !sale.saleStatus) {
+        return "Unknown Status";
+    }
+
+    const status = sale.saleStatus;
+
+    if (status.registrarApproved) {
+        return "Approved";
+    }
+    if (status.buyerConfirmed && status.sellerConfirmed) {
+        return "Waiting for Registrar";
+    }
+    if (status.sellerConfirmed && !status.buyerConfirmed) {
+        return "Waiting for Buyer";
+    }
+    if (!status.sellerConfirmed) {
+        return "Waiting for Seller";
+    }
+
+    return "Pending";
+};
+
+    const handleConfirmByBuyer = async (thandaperNumber) => {
+        setError(null);
+        try {
+            const tx = await contract.confirmSaleByBuyer(thandaperNumber);
+            await tx.wait();
+            debouncedFetch();
+        } catch (error) {
+            console.error("Purchase confirmation error:", error);
+            setError(error.message);
         }
     };
 
     return (
-        <div className="container mx-auto p-6">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800">My Land Portfolio</h1>
-                <p className="text-gray-600 mt-2">Manage your land properties and transactions</p>
+        <div style={styles.container}>
+            <div style={styles.header}>
+                <h1 style={styles.headerTitle}>My Land Portfolio</h1>
+                <p style={styles.headerSubtitle}>Manage your land properties and transactions</p>
             </div>
 
-            <div className="mb-4">
-                <button
-                    onClick={() => setShowRegisterForm(!showRegisterForm)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-                >
-                    {showRegisterForm ? 'Close Register Form' : 'Register New Land'}
-                </button>
+            <div style={styles.buttonSection}>
                 <button
                     onClick={() => setShowSaleForm(!showSaleForm)}
-                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 ml-4"
+                    style={{...styles.button.base, ...styles.button.green}}
                 >
                     {showSaleForm ? 'Close Sale Form' : 'Initiate Land Sale'}
                 </button>
             </div>
 
-            {showRegisterForm && (
-                <form onSubmit={handleRegisterLand} className="mb-8 bg-white p-6 rounded-lg shadow">
-                    <h2 className="text-xl font-semibold mb-4">Register New Land</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                            type="number"
-                            name="thandaperNumber"
-                            value={formData.thandaperNumber}
-                            onChange={handleInputChange}
-                            placeholder="Thandaper Number"
-                            className="input-field"
-                            min="0"
-                            required
-                        />
-                        <input
-                            type="text"
-                            name="taluk"
-                            value={formData.taluk}
-                            onChange={handleInputChange}
-                            placeholder="Taluk"
-                            className="input-field"
-                            required
-                        />
-                        <input
-                            type="text"
-                            name="village"
-                            value={formData.village}
-                            onChange={handleInputChange}
-                            placeholder="Village"
-                            className="input-field"
-                            required
-                        />
-                        <input
-                            type="number"
-                            name="surveyNumber"
-                            value={formData.surveyNumber}
-                            onChange={handleInputChange}
-                            placeholder="Survey Number"
-                            className="input-field"
-                            min="0"
-                            required
-                        />
-                        <input
-                            type="number"
-                            name="area"
-                            value={formData.area}
-                            onChange={handleInputChange}
-                            placeholder="Area (in square meters)"
-                            className="input-field"
-                            min="0"
-                            step="0.000000000000000001"
-                            required
-                        />
-                        <select
-                            name="landType"
-                            value={formData.landType}
-                            onChange={handleInputChange}
-                            className="input-field"
-                            required
-                        >
-                            {Object.keys(LandTypes).map(type => (
-                                <option key={type} value={type}>{type}</option>
-                            ))}
-                        </select>
-                        <input
-                            type="text"
-                            name="landTitle"
-                            value={formData.landTitle}
-                            onChange={handleInputChange}
-                            placeholder="Land Title"
-                            className="input-field"
-                            required
-                        />
-                        <input
-                            type="text"
-                            name="geoLocation"
-                            value={formData.geoLocation}
-                            onChange={handleInputChange}
-                            placeholder="Geo Location"
-                            className="input-field"
-                            required
-                        />
-                        <input
-                            type="number"
-                            name="marketValue"
-                            value={formData.marketValue}
-                            onChange={handleInputChange}
-                            placeholder="Market Value (in ETH)"
-                            className="input-field"
-                            min="0"
-                            step="0.000000000000000001"
-                            required
-                        />
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                name="protectedStatus"
-                                checked={formData.protectedStatus}
-                                onChange={handleInputChange}
-                                className="mr-2"
-                            />
-                            <label>Protected Status</label>
-                        </div>
-                    </div>
-                    <div className="mt-4">
-                        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-                            Register Land
-                        </button>
-                    </div>
-                </form>
-            )}
-
             {showSaleForm && (
-                <form onSubmit={handleInitiateSale} className="mb-8 bg-white p-6 rounded-lg shadow">
-                    <h2 className="text-xl font-semibold mb-4">Initiate Land Sale</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                            type="text"
-                            name="thandaperNumber"
-                            value={formData.thandaperNumber}
-                            onChange={handleInputChange}
-                            placeholder="Thandaper Number"
-                            className="input-field"
-                            required
-                        />
-                        <input
-                            type="text"
-                            name="buyer"
-                            value={formData.buyer}
-                            onChange={handleInputChange}
-                            placeholder="Buyer Address"
-                            className="input-field"
-                            required
-                        />
-                    </div>
-                    <div className="mt-4">
-                        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
-                            Initiate Sale
-                        </button>
-                    </div>
-                </form>
+                <div style={styles.form}>
+                    <h2 style={styles.formTitle}>Initiate Land Sale</h2>
+                    <form onSubmit={handleInitiateSale}>
+                        <div style={styles.formGrid}>
+                            <input
+                                type="text"
+                                name="thandaperNumber"
+                                value={formData.thandaperNumber}
+                                onChange={handleInputChange}
+                                placeholder="Thandaper Number"
+                                style={styles.input}
+                                required
+                            />
+                            <input
+                                type="text"
+                                name="buyer"
+                                value={formData.buyer}
+                                onChange={handleInputChange}
+                                placeholder="Buyer Address"
+                                style={styles.input}
+                                required
+                            />
+                        </div>
+                        <div style={{marginTop: '1rem'}}>
+                            <button 
+                                type="submit" 
+                                style={{...styles.button.base, ...styles.button.green}}
+                            >
+                                Initiate Sale
+                            </button>
+                        </div>
+                    </form>
+                </div>
             )}
 
-            <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">My Properties</h2>
+            {/* My Properties Section */}
+            <div style={styles.section}>
+                <h2 style={styles.sectionTitle}>My Properties</h2>
                 {loading ? (
-                    <div>Loading properties...</div>
+                    <div style={styles.loadingText}>Loading properties...</div>
                 ) : lands.length > 0 ? (
-                    <table className="min-w-full bg-white">
+                    <table style={styles.table}>
                         <thead>
                             <tr>
-                                <th className="py-2">Title</th>
-                                <th className="py-2">Survey Number</th>
-                                <th className="py-2">Area</th>
-                                <th className="py-2">Village</th>
-                                <th className="py-2">Taluk</th>
-                                <th className="py-2">Actions</th>
+                                <th style={styles.th}>Thandaper Number</th>
+                                <th style={styles.th}>Title</th>
+                                <th style={styles.th}>Survey Number</th>
+                                <th style={styles.th}>Area</th>
+                                <th style={styles.th}>Village</th>
+                                <th style={styles.th}>Taluk</th>
+                                <th style={styles.th}>Market Value (ETH)</th>
+                                <th style={styles.th}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {lands.map((land, index) => (
-                                <tr key={index} className="text-center">
-                                    <td className="py-2">{land.landTitle}</td>
-                                    <td className="py-2">{land.surveyNumber.toString()}</td>
-                                    <td className="py-2">{land.area.toString()} sq ft</td>
-                                    <td className="py-2">{land.village}</td>
-                                    <td className="py-2">{land.taluk}</td>
-                                    <td className="py-2">
-                                        <button className="bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600">
-                                            View
+                            {lands.map((land) => (
+                                <tr key={land.thandaperNumber}>
+                                    <td style={styles.td}>{land.thandaperNumber}</td>
+                                    <td style={styles.td}>{land.landTitle}</td>
+                                    <td style={styles.td}>{land.surveyNumber}</td>
+                                    <td style={styles.td}>{ethers.formatEther(land.area)} sq ft</td>
+                                    <td style={styles.td}>{land.village}</td>
+                                    <td style={styles.td}>{land.taluk}</td>
+                                    <td style={styles.td}>{ethers.formatEther(land.marketValue)}</td>
+                                    <td style={styles.td}>
+                                        <button 
+                                            onClick={() => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    thandaperNumber: land.thandaperNumber
+                                                }));
+                                                setShowSaleForm(true);
+                                            }}
+                                            style={{...styles.button.base, ...styles.button.blue}}
+                                        >
+                                            Sell
+                                        </button>
+                                        <button 
+                                            style={{...styles.button.base, ...styles.button.gray}}
+                                        >
+                                            Details
                                         </button>
                                     </td>
                                 </tr>
@@ -379,9 +455,82 @@ const LandOwnerDashboard = () => {
                         </tbody>
                     </table>
                 ) : (
-                    <div className="text-gray-500">No properties found</div>
+                    <div style={styles.emptyText}>No properties found</div>
                 )}
             </div>
+
+            {/* Pending Sales Section */}
+            <div style={styles.section}>
+                <h2 style={styles.sectionTitle}>Pending Sales</h2>
+                {pendingSales.length > 0 ? (
+                    <table style={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={styles.th}>Land ID</th>
+                                <th style={styles.th}>Buyer</th>
+                                <th style={styles.th}>Status</th>
+                                <th style={styles.th}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pendingSales.map((sale) => (
+                                <tr key={sale.thandaperNumber}>
+                                    <td style={styles.td}>{sale.thandaperNumber}</td>
+                                    <td style={styles.td}>
+                                        {`${sale?.buyer?.slice(0, 6)}...${sale?.buyer?.slice(-4)}`}
+                                    </td>
+                                    <td style={styles.td}>
+                                        {getSaleStatus(sale)}
+                                    </td>
+                                    <td style={styles.td}>
+                                        {!sale.sellerConfirmed && (
+                                            <button
+                                                onClick={() => handleConfirmSale(sale.thandaperNumber)}
+                                                style={{...styles.button.base, ...styles.button.green}}
+                                            >
+                                                Confirm Sale
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div style={styles.emptyText}>No pending sales</div>
+                )}
+            </div>
+            {/* Pending Purchases Section */}
+{pendingSales.filter(sale => sale.saleStatus.buyer.toLowerCase() === walletAddress.toLowerCase()).length > 0 && (
+    <div style={styles.section}>
+        <h2>Pending Purchases</h2>
+        {pendingSales
+            .filter(sale => sale.saleStatus.buyer.toLowerCase() === walletAddress.toLowerCase())
+            .map(sale => (
+                <div key={sale.thandaperNumber} style={styles.saleCard}>
+                    <h3>Land: {sale.landTitle}</h3>
+                    <p>Thandaper Number: {sale.thandaperNumber}</p>
+                    <p>Seller: {sale.saleStatus.seller}</p>
+                    <p>Status: {
+                        sale.saleStatus.registrarApproved ? "Approved" :
+                        sale.saleStatus.buyerConfirmed ? "Waiting for Registrar" :
+                        sale.saleStatus.sellerConfirmed ? "Waiting for Your Confirmation" :
+                        "Waiting for Seller Confirmation"
+                    }</p>
+                    
+                    {!sale.saleStatus.buyerConfirmed && sale.saleStatus.sellerConfirmed && (
+                        <button 
+                            onClick={() => handleConfirmByBuyer(sale.thandaperNumber)}
+                            style={styles.confirmButton}
+                        >
+                            Confirm Purchase
+                        </button>
+                    )}
+                </div>
+            ))
+        }
+    </div>
+)}
         </div>
     );
 };

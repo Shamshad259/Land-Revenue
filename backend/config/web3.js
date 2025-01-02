@@ -1,4 +1,3 @@
-// config/web3.js
 import { ethers } from "ethers";
 import dotenv from 'dotenv';
 import { abi } from "./contract.js";
@@ -11,17 +10,17 @@ if (!process.env.CONTRACT_ADDRESS) {
 
 const setupProvider = () => {
     try {
-        // Create a StaticJsonRpcProvider instead of JsonRpcProvider
-        const provider = new ethers.providers.StaticJsonRpcProvider(
+        // In v6, JsonRpcProvider is used differently and StaticJsonRpcProvider is removed
+        const provider = new ethers.JsonRpcProvider(
             "http://127.0.0.1:8545",
             {
                 chainId: 31337,
-                name: 'hardhat',
-                ensAddress: null // Explicitly disable ENS
+                name: 'hardhat'
+                // ensAddress is no longer needed in v6
             }
         );
 
-        // Add error handling
+        // Error handling remains similar
         provider.on("error", (error) => {
             console.error("Provider Error:", error);
         });
@@ -35,6 +34,7 @@ const setupProvider = () => {
 
 const setupContract = (provider) => {
     try {
+        // Contract creation syntax remains the same
         return new ethers.Contract(
             process.env.CONTRACT_ADDRESS,
             abi,
@@ -50,7 +50,7 @@ const setupContract = (provider) => {
 const provider = setupProvider();
 const contract = setupContract(provider);
 
-// Simple connection check
+// Connection check with v6 syntax
 const checkConnection = async () => {
     try {
         const network = await provider.getNetwork();
@@ -59,7 +59,7 @@ const checkConnection = async () => {
             chainId: network.chainId
         });
         
-        // Basic contract check
+        // Basic contract check remains similar
         const code = await provider.getCode(process.env.CONTRACT_ADDRESS);
         if (code === '0x') {
             console.warn('Warning: No contract code at specified address');

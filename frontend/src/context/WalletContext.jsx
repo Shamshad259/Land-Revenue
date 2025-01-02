@@ -14,16 +14,13 @@ const HARDHAT_NETWORK = {
     }
 };
 
-// Role mapping
+// Role mapping from your contract
 const Roles = {
     None: 0,
     ChiefSecretary: 1,
     Collector: 2,
-    Tahsildar: 3,
-    VillageOfficer: 4,
-    SubRegistrar: 5,
-    SeniorRegistrar: 6,
-    LandOwner: 7
+    Registrar: 3,
+    LandOwner: 4
 };
 
 const WalletContext = createContext(null);
@@ -34,8 +31,9 @@ export const WalletProvider = ({ children }) => {
     const [error, setError] = useState("");
     const [userRole, setUserRole] = useState(null);
     const [contract, setContract] = useState(null);
+    const [userIdentity, setUserIdentity] = useState(null);
 
-    // Initialize contract
+    // Initialize contract with ethers v6
     const initializeContract = async (provider) => {
         try {
             const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
@@ -85,19 +83,31 @@ export const WalletProvider = ({ children }) => {
         }
     };
 
-    // Get user's role from contract
-    const fetchUserRole = async (address, contract) => {
+    // Get user's identity and role from contract
+    const fetchUserDetails = async (address, contract) => {
         try {
-            const roleNumber = await contract.userRoles(address);
-            // Convert to number - in ethers v6, contract calls return native bigint
+            const [userIdentity, roleNumber] = await Promise.all([
+                contract.userIdentities(address),
+                contract.userRoles(address)
+            ]);
+
+            // Store user identity
+            setUserIdentity({
+                governmentId: userIdentity.governmentId,
+                isVerified: userIdentity.isVerified,
+                isBlocked: userIdentity.isBlocked
+            });
+
+            // Set user role
             const roleValue = Number(roleNumber);
             const role = Object.keys(Roles).find(
                 key => Roles[key] === roleValue
             );
             setUserRole(role);
-            return role;
+
+            return { role, userIdentity };
         } catch (error) {
-            console.error("Error fetching user role:", error);
+            console.error("Error fetching user details:", error);
             throw error;
         }
     };
@@ -125,7 +135,7 @@ export const WalletProvider = ({ children }) => {
             const signer = await provider.getSigner();
             const contractInstance = await initializeContract(signer);
 
-            await fetchUserRole(address, contractInstance);
+            await fetchUserDetails(address, contractInstance);
 
             return address;
         } catch (error) {
@@ -136,13 +146,41 @@ export const WalletProvider = ({ children }) => {
         }
     };
 
-    // Check if user has required role
+    // Check if user has required role and is verified/not blocked
     const checkRole = (requiredRoles) => {
-        if (!userRole) return false;
+        if (!userRole || !userIdentity) return false;
+        if (userIdentity.isBlocked) return false;
+        if (!userIdentity.isVerified) return false;
         return requiredRoles.includes(userRole);
     };
 
-    // Listen for network changes
+    // Get user's owned lands
+    const getOwnedLands = async (address) => {
+        try {
+            if (!contract) throw new Error("Contract not initialized");
+            const lands = await contract.getOwnedLands(address);
+            return lands.map(land => land.toString());
+        } catch (error) {
+            console.error("Error fetching owned lands:", error);
+            throw error;
+        }
+    };
+
+    // Prepare transaction data
+    const prepareTransaction = async (methodName, ...params) => {
+        try {
+            if (!contract) throw new Error("Contract not initialized");
+            return {
+                methodName,
+                params,
+                to: contract.target
+            };
+        } catch (error) {
+            console.error("Error preparing transaction:", error);
+            throw error;
+        }
+    };
+
     useEffect(() => {
         if (window.ethereum) {
             window.ethereum.on('chainChanged', () => {
@@ -151,18 +189,18 @@ export const WalletProvider = ({ children }) => {
         }
     }, []);
 
-    // Listen for account changes
     useEffect(() => {
         if (window.ethereum) {
             window.ethereum.on("accountsChanged", async (accounts) => {
                 if (accounts.length > 0) {
                     setWalletAddress(accounts[0]);
                     if (contract) {
-                        await fetchUserRole(accounts[0], contract);
+                        await fetchUserDetails(accounts[0], contract);
                     }
                 } else {
                     setWalletAddress("");
                     setUserRole(null);
+                    setUserIdentity(null);
                 }
             });
         }
@@ -176,14 +214,20 @@ export const WalletProvider = ({ children }) => {
 
     const value = {
         walletAddress,
+        setWalletAddress,
         isLoading,
         error,
         userRole,
+        setUserRole,
+        userIdentity,
         contract,
         setError,
         setIsLoading,
         connectWallet,
-        checkRole
+        checkRole,
+        getOwnedLands,
+        prepareTransaction,
+        Roles // Export Roles enum for use in components
     };
 
     return (
