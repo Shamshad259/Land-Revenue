@@ -3,98 +3,81 @@ import { useWallet } from '../../context/WalletContext';
 import { ethers } from 'ethers';
 import { debounce } from 'lodash';
 
-
 const styles = {
     container: {
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '1.5rem'
+        padding: '24px'
     },
     header: {
-        marginBottom: '2rem'
+        marginBottom: '32px'
     },
     headerTitle: {
-        fontSize: '1.875rem',
+        fontSize: '30px',
         fontWeight: 'bold',
         color: '#1f2937'
     },
     headerSubtitle: {
         color: '#4b5563',
-        marginTop: '0.5rem'
+        marginTop: '8px'
     },
     buttonSection: {
-        marginBottom: '1rem'
+        marginBottom: '16px'
     },
     button: {
-        base: {
-            padding: '0.5rem 1rem',
-            borderRadius: '0.5rem',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-        },
-        green: {
-            backgroundColor: '#22c55e',
-            color: 'white',
-            '&:hover': {
-                backgroundColor: '#16a34a'
-            }
-        },
-        blue: {
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            marginRight: '0.5rem',
-            '&:hover': {
-                backgroundColor: '#2563eb'
-            }
-        },
-        gray: {
-            backgroundColor: '#6b7280',
-            color: 'white',
-            '&:hover': {
-                backgroundColor: '#4b5563'
-            }
-        }
+        padding: '8px 16px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        marginRight: '8px',
+        transition: 'background-color 0.2s'
+    },
+    greenButton: {
+        backgroundColor: '#22c55e',
+        color: 'white'
+    },
+    blueButton: {
+        backgroundColor: '#3b82f6',
+        color: 'white'
+    },
+    grayButton: {
+        backgroundColor: '#6b7280',
+        color: 'white'
     },
     form: {
-        marginBottom: '2rem',
+        marginBottom: '32px',
         backgroundColor: 'white',
-        padding: '1.5rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+        padding: '24px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
     },
     formTitle: {
-        fontSize: '1.25rem',
+        fontSize: '20px',
         fontWeight: '600',
-        marginBottom: '1rem'
+        marginBottom: '16px'
     },
     formGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '1rem'
+        gap: '16px'
     },
     input: {
         width: '100%',
-        padding: '0.5rem',
+        padding: '8px',
         border: '1px solid #d1d5db',
-        borderRadius: '0.375rem',
-        '&:focus': {
-            outline: 'none',
-            borderColor: '#3b82f6',
-            boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)'
-        }
+        borderRadius: '6px'
     },
     section: {
         backgroundColor: 'white',
-        borderRadius: '0.5rem',
-        padding: '1.5rem',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-        marginBottom: '1.5rem'
+        borderRadius: '8px',
+        padding: '24px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        marginBottom: '24px'
     },
     sectionTitle: {
-        fontSize: '1.25rem',
+        fontSize: '20px',
         fontWeight: '600',
-        marginBottom: '1rem'
+        marginBottom: '16px'
     },
     table: {
         width: '100%',
@@ -102,12 +85,12 @@ const styles = {
         borderCollapse: 'collapse'
     },
     th: {
-        padding: '0.5rem',
+        padding: '8px',
         textAlign: 'left',
         borderBottom: '1px solid #e5e7eb'
     },
     td: {
-        padding: '0.5rem',
+        padding: '8px',
         textAlign: 'left',
         borderBottom: '1px solid #e5e7eb'
     },
@@ -117,10 +100,24 @@ const styles = {
     loadingText: {
         color: '#6b7280',
         textAlign: 'center',
-        padding: '1rem'
+        padding: '16px'
+    },
+    saleCard: {
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '16px',
+        marginBottom: '16px'
+    },
+    confirmButton: {
+        backgroundColor: '#22c55e',
+        color: 'white',
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        cursor: 'pointer',
+        marginTop: '8px'
     }
 };
-
 
 const LandOwnerDashboard = () => {
     const { contract, walletAddress } = useWallet();
@@ -361,7 +358,7 @@ const getSaleStatus = (sale) => {
             <div style={styles.buttonSection}>
                 <button
                     onClick={() => setShowSaleForm(!showSaleForm)}
-                    style={{...styles.button.base, ...styles.button.green}}
+                    style={{...styles.button, ...styles.greenButton}}
                 >
                     {showSaleForm ? 'Close Sale Form' : 'Initiate Land Sale'}
                 </button>
@@ -394,7 +391,7 @@ const getSaleStatus = (sale) => {
                         <div style={{marginTop: '1rem'}}>
                             <button 
                                 type="submit" 
-                                style={{...styles.button.base, ...styles.button.green}}
+                                style={{...styles.button, ...styles.greenButton}}
                             >
                                 Initiate Sale
                             </button>
@@ -441,12 +438,12 @@ const getSaleStatus = (sale) => {
                                                 }));
                                                 setShowSaleForm(true);
                                             }}
-                                            style={{...styles.button.base, ...styles.button.blue}}
+                                            style={{...styles.button, ...styles.blueButton}}
                                         >
                                             Sell
                                         </button>
                                         <button 
-                                            style={{...styles.button.base, ...styles.button.gray}}
+                                            style={{...styles.button, ...styles.grayButton}}
                                         >
                                             Details
                                         </button>
@@ -489,7 +486,7 @@ const getSaleStatus = (sale) => {
                                         {!sale.saleStatus.sellerConfirmed && (
                                             <button
                                                 onClick={() => handleConfirmSale(sale.thandaperNumber)}
-                                                style={{...styles.button.base, ...styles.button.green}}
+                                                style={{...styles.button, ...styles.greenButton}}
                                             >
                                                 Confirm Sale
                                             </button>

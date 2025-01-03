@@ -61,6 +61,10 @@ contract LandManagement {
     mapping(string => address) private govIdToAddress;
     mapping(string => RecoveryRequest) private recoveryRequests;
 
+    // Add a mapping to track all active recovery govIds
+    mapping(uint256 => string) private activeRecoveryGovIds;
+    uint256 private recoveryRequestCount;
+
     // Keep track of all registered land IDs
     uint256[] private allLandIds;
 
@@ -287,6 +291,10 @@ contract LandManagement {
         UserIdentity storage oldUser = userIdentities[oldAddress];
         oldUser.isBlocked = true;
 
+        // Add to active recoveries tracking
+        activeRecoveryGovIds[recoveryRequestCount] = govId;
+        recoveryRequestCount++;
+
         emit RecoveryRequested(govId, msg.sender);
         emit AccountBlocked(oldAddress, block.timestamp);
     }
@@ -320,6 +328,17 @@ contract LandManagement {
     delete userOwnedLands[oldAddress];
     delete userIdentities[oldAddress];
     delete recoveryRequests[govId];
+
+    // Remove from active recoveries
+    for(uint256 i = 0; i < recoveryRequestCount; i++) {
+        if(keccak256(bytes(activeRecoveryGovIds[i])) == keccak256(bytes(govId))) {
+            // Move the last element to this position
+            activeRecoveryGovIds[i] = activeRecoveryGovIds[recoveryRequestCount - 1];
+            delete activeRecoveryGovIds[recoveryRequestCount - 1];
+            recoveryRequestCount--;
+            break;
+        }
+    }
     
     emit RecoveryCompleted(govId, oldAddress, newAddress);
 }
@@ -343,5 +362,32 @@ contract LandManagement {
         user.isBlocked = false;
         
         emit AccountUnblocked(userAddress, block.timestamp);
+    }
+
+    // Add this function before the closing contract bracket
+    function getRecoveryRequest(string memory govId) public view returns (
+        string memory governmentId,
+        address newAddress,
+        uint256 requestTime,
+        bool isActive
+    ) {
+        RecoveryRequest storage request = recoveryRequests[govId];
+        return (
+            request.governmentId,
+            request.newAddress,
+            request.requestTime,
+            request.isActive
+        );
+    }
+
+    // Replace the problematic getAllRecoveryRequests with this version
+    function getAllRecoveryRequests() public view returns (string[] memory) {
+        string[] memory result = new string[](recoveryRequestCount);
+        
+        for(uint256 i = 0; i < recoveryRequestCount; i++) {
+            result[i] = activeRecoveryGovIds[i];
+        }
+        
+        return result;
     }
 }

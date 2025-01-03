@@ -327,6 +327,45 @@ const fetchPendingActions = async () => {
             console.log("Filtered sales:", sales);
             setPendingActions(prev => ({ ...prev, sales }));
         }
+        // For Collector - Fetch Recovery Requests and Blocked Accounts
+        else if (userRole === 'Collector') {
+            try {
+                // Get recovery events
+                const recoveryEvents = await contract.queryFilter(contract.filters.RecoveryRequested());
+                
+                // Get details for each recovery request
+                const pendingRecoveries = await Promise.all(
+                    recoveryEvents.map(async (event) => {
+                        try {
+                            const recovery = await contract.getRecoveryRequest(event.args.govId);
+                            // Only include active requests
+                            if (recovery.isActive) {
+                                return {
+                                    govId: event.args.govId,
+                                    newAddress: recovery.newAddress,
+                                    timestamp: recovery.requestTime.toString(),
+                                    isActive: recovery.isActive
+                                };
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching recovery request for ${event.args.govId}:`, error);
+                        }
+                        return null;
+                    })
+                );
+
+                const validRecoveries = pendingRecoveries.filter(recovery => recovery !== null);
+                console.log("Valid recoveries:", validRecoveries);
+                
+                setPendingActions(prev => ({
+                    ...prev,
+                    recoveries: validRecoveries
+                }));
+
+            } catch (error) {
+                console.error("Error fetching recovery requests:", error);
+            }
+        }
 
     } catch (error) {
         console.error("Error fetching pending actions:", error);
@@ -336,10 +375,35 @@ const fetchPendingActions = async () => {
     }
 };
 
+// Add event listener for recovery requests
+useEffect(() => {
+    if (contract && userRole === 'Collector') {
+        const recoveryFilter = contract.filters.RecoveryRequested();
+        const approvalFilter = contract.filters.RecoveryApproved();
+
+        contract.on(recoveryFilter, () => {
+            fetchPendingActions();
+        });
+
+        contract.on(approvalFilter, () => {
+            fetchPendingActions();
+        });
+
+        return () => {
+            contract.off(recoveryFilter);
+            contract.off(approvalFilter);
+        };
+    }
+}, [contract, userRole]);
+
 // Add useEffect to fetch pending actions on component mount
 useEffect(() => {
-    if (contract && userRole === 'Registrar') {
-        fetchPendingActions();
+    if (contract) {
+        if (userRole === 'Registrar' || userRole === 'Collector') {
+            fetchPendingActions();
+        } else {
+            setLoading(false); // Set loading to false for other roles
+        }
     }
 }, [contract, userRole]);
 
@@ -797,4 +861,4 @@ useEffect(() => {
     );
 };
 
-export default OfficialDashboard;   
+export default OfficialDashboard;
