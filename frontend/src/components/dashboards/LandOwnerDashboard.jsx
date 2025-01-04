@@ -415,7 +415,7 @@ const getSaleStatus = (sale) => {
                                 <th style={styles.th}>Area</th>
                                 <th style={styles.th}>Village</th>
                                 <th style={styles.th}>Taluk</th>
-                                <th style={styles.th}>Market Value (ETH)</th>
+                                <th style={styles.th}>Market Value</th>
                                 <th style={styles.th}>Actions</th>
                             </tr>
                         </thead>
@@ -441,11 +441,6 @@ const getSaleStatus = (sale) => {
                                             style={{...styles.button, ...styles.blueButton}}
                                         >
                                             Sell
-                                        </button>
-                                        <button 
-                                            style={{...styles.button, ...styles.grayButton}}
-                                        >
-                                            Details
                                         </button>
                                     </td>
                                 </tr>

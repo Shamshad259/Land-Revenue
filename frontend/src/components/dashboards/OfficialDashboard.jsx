@@ -221,7 +221,6 @@ const OfficialDashboard = () => {
     const [showRegisterForm, setShowRegisterForm] = useState(false);
     const [showSetRoleForm, setShowSetRoleForm] = useState(false);
     const [showRecoveryForm, setShowRecoveryForm] = useState(false);
-    const [showBlockForm, setShowBlockForm] = useState(false);
 
     const [formData, setFormData] = useState({
         // Land Registration
@@ -330,25 +329,28 @@ const fetchPendingActions = async () => {
         // For Collector - Fetch Recovery Requests and Blocked Accounts
         else if (userRole === 'Collector') {
             try {
-                // Get recovery events
-                const recoveryEvents = await contract.queryFilter(contract.filters.RecoveryRequested());
-                
+                // Get all active recovery govIds first
+                const activeRecoveryGovIds = await contract.getAllRecoveryRequests();
+                console.log("Active recovery IDs:", activeRecoveryGovIds);
+
                 // Get details for each recovery request
                 const pendingRecoveries = await Promise.all(
-                    recoveryEvents.map(async (event) => {
+                    activeRecoveryGovIds.map(async (govId) => {
                         try {
-                            const recovery = await contract.getRecoveryRequest(event.args.govId);
+                            const recovery = await contract.getRecoveryRequest(govId);
+                            console.log("Recovery details for", govId, ":", recovery);
+
                             // Only include active requests
-                            if (recovery.isActive) {
+                            if (recovery && recovery.isActive) {
                                 return {
-                                    govId: event.args.govId,
+                                    govId: govId,
                                     newAddress: recovery.newAddress,
                                     timestamp: recovery.requestTime.toString(),
                                     isActive: recovery.isActive
                                 };
                             }
                         } catch (error) {
-                            console.error(`Error fetching recovery request for ${event.args.govId}:`, error);
+                            console.error(`Error fetching recovery request for ${govId}:`, error);
                         }
                         return null;
                     })
@@ -364,6 +366,11 @@ const fetchPendingActions = async () => {
 
             } catch (error) {
                 console.error("Error fetching recovery requests:", error);
+                console.error("Error details:", {
+                    message: error.message,
+                    code: error.code,
+                    stack: error.stack
+                });
             }
         }
 
@@ -379,19 +386,19 @@ const fetchPendingActions = async () => {
 useEffect(() => {
     if (contract && userRole === 'Collector') {
         const recoveryFilter = contract.filters.RecoveryRequested();
-        const approvalFilter = contract.filters.RecoveryApproved();
+        const completedFilter = contract.filters.RecoveryCompleted(); // Changed from RecoveryApproved to RecoveryCompleted
 
         contract.on(recoveryFilter, () => {
             fetchPendingActions();
         });
 
-        contract.on(approvalFilter, () => {
+        contract.on(completedFilter, () => {
             fetchPendingActions();
         });
 
         return () => {
             contract.off(recoveryFilter);
-            contract.off(approvalFilter);
+            contract.off(completedFilter);
         };
     }
 }, [contract, userRole]);
@@ -493,25 +500,27 @@ useEffect(() => {
     // Collector Actions
     const handleApproveRecovery = async (govId) => {
         try {
+            console.log("Approving recovery for govId:", govId);
+            setLoading(true);
+            
             const tx = await contract.approveRecovery(govId);
+            console.log("Transaction sent:", tx.hash);
+            
             await tx.wait();
-            fetchPendingActions();
+            console.log("Transaction confirmed");
+            
+            // Refresh the pending actions
+            await fetchPendingActions();
+            
+            alert("Recovery request approved successfully!");
         } catch (error) {
             console.error("Error approving recovery:", error);
+            alert(`Error approving recovery: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleBlockAccount = async (e) => {
-        e.preventDefault();
-        try {
-            const tx = await contract.blockAccount(formData.govId);
-            await tx.wait();
-            setShowBlockForm(false);
-            fetchPendingActions();
-        } catch (error) {
-            console.error("Error blocking account:", error);
-        }
-    };
 
     const handleUnblockAccount = async (userAddress) => {
         try {
@@ -558,23 +567,7 @@ useEffect(() => {
                         Register New Land
                     </button>
                 )}
-    
-                {userRole === 'Collector' && (
-                    <>
-                        <button
-                            onClick={() => setShowBlockForm(!showBlockForm)}
-                            style={styles.actionButton}
-                        >
-                            Block/Unblock Account
-                        </button>
-                        <button
-                            onClick={() => setShowRecoveryForm(!showRecoveryForm)}
-                            style={styles.actionButton}
-                        >
-                            Handle Recovery Requests
-                        </button>
-                    </>
-                )}
+
             </div>
     
             {/* Forms Section */}
@@ -710,29 +703,6 @@ useEffect(() => {
                 </div>
             )}
     
-            {/* Block Account Form */}
-            {userRole === 'Collector' && showBlockForm && (
-                <div style={styles.formCard}>
-                    <h2 style={styles.formTitle}>Block Account</h2>
-                    <form onSubmit={handleBlockAccount} style={styles.formGrid}>
-                        <input
-                            type="text"
-                            name="govId"
-                            value={formData.govId}
-                            onChange={handleInputChange}
-                            placeholder="Government ID"
-                            style={styles.input}
-                            required
-                        />
-                        <button
-                            type="submit"
-                            style={{...styles.submitButton, gridColumn: 'span 1'}}
-                        >
-                            Block Account
-                        </button>
-                    </form>
-                </div>
-            )}
     
             {/* Pending Actions Section */}
 <div style={styles.pendingSection}>
