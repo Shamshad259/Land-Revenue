@@ -33,7 +33,6 @@ export const WalletProvider = ({ children }) => {
     const [contract, setContract] = useState(null);
     const [userIdentity, setUserIdentity] = useState(null);
 
-    // Initialize contract with ethers v6
     const initializeContract = async (provider) => {
         try {
             const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
@@ -112,7 +111,6 @@ export const WalletProvider = ({ children }) => {
         }
     };
 
-    // Connect wallet function
     const connectWallet = async () => {
         try {
             setIsLoading(true);
@@ -152,18 +150,6 @@ export const WalletProvider = ({ children }) => {
         if (userIdentity.isBlocked) return false;
         if (!userIdentity.isVerified) return false;
         return requiredRoles.includes(userRole);
-    };
-
-    // Get user's owned lands
-    const getOwnedLands = async (address) => {
-        try {
-            if (!contract) throw new Error("Contract not initialized");
-            const lands = await contract.getOwnedLands(address);
-            return lands.map(land => land.toString());
-        } catch (error) {
-            console.error("Error fetching owned lands:", error);
-            throw error;
-        }
     };
 
     // Prepare transaction data
@@ -225,9 +211,8 @@ export const WalletProvider = ({ children }) => {
         setIsLoading,
         connectWallet,
         checkRole,
-        getOwnedLands,
         prepareTransaction,
-        Roles // Export Roles enum for use in components
+        Roles 
     };
 
     return (

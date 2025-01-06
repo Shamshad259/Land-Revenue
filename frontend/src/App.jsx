@@ -6,13 +6,14 @@ import AuthWrapper from './utils/AuthWrapper';
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
+import './styles/dashboard.css';
 
 function App() {
   return (
     <WalletProvider>
       <Layout>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login />} /> 
           <Route path="/register" element={<Register />} />
           <Route 
             path="/dashboard" 

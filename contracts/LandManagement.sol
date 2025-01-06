@@ -22,7 +22,7 @@ contract LandManagement {
         string landTitle;
         bool exists;
         uint256 ownershipStartTime;
-        address[] previousOwners; // Changed from string[] to address[]
+        address[] previousOwners;
         uint256 marketValue;
         string geoLocation;
     }
@@ -201,12 +201,10 @@ contract LandManagement {
         );
     }
 
-    // Add new function to get all lands
     function getLands() public view returns (uint256[] memory) {
         return allLandIds;
     }
 
-    // Add this new function before the Sale Functions section
     function isGovIdRegistered(string memory govId) public view returns (bool) {
         return govIdToAddress[govId] != address(0);
     }
@@ -255,7 +253,7 @@ contract LandManagement {
         Land storage land = lands[thandaperNumber];
         
         // Transfer ownership
-        land.previousOwners.push(land.owner); // Now works because we store addresses instead of strings
+        land.previousOwners.push(land.owner); 
         land.owner = saleRequest.buyer;
         land.ownershipStartTime = block.timestamp;
 
@@ -291,7 +289,6 @@ contract LandManagement {
         UserIdentity storage oldUser = userIdentities[oldAddress];
         oldUser.isBlocked = true;
 
-        // Add to active recoveries tracking
         activeRecoveryGovIds[recoveryRequestCount] = govId;
         recoveryRequestCount++;
 
@@ -332,7 +329,6 @@ contract LandManagement {
     // Remove from active recoveries
     for(uint256 i = 0; i < recoveryRequestCount; i++) {
         if(keccak256(bytes(activeRecoveryGovIds[i])) == keccak256(bytes(govId))) {
-            // Move the last element to this position
             activeRecoveryGovIds[i] = activeRecoveryGovIds[recoveryRequestCount - 1];
             delete activeRecoveryGovIds[recoveryRequestCount - 1];
             recoveryRequestCount--;
@@ -364,7 +360,6 @@ contract LandManagement {
         emit AccountUnblocked(userAddress, block.timestamp);
     }
 
-    // Add this function before the closing contract bracket
     function getRecoveryRequest(string memory govId) public view returns (
         string memory governmentId,
         address newAddress,
@@ -380,7 +375,6 @@ contract LandManagement {
         );
     }
 
-    // Replace the problematic getAllRecoveryRequests with this version
     function getAllRecoveryRequests() public view returns (string[] memory) {
         string[] memory result = new string[](recoveryRequestCount);
         

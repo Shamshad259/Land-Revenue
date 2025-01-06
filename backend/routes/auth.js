@@ -16,7 +16,6 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Wallet address and signature are required' });
         }
 
-        // Verify signature - Updated for ethers v6
         try {
             const recoveredAddress = ethers.verifyMessage(AUTH_MESSAGE, signature);
             if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
@@ -28,7 +27,6 @@ router.post('/login', async (req, res) => {
         }
 
         try {
-            // Check user identity from contract
             const userIdentity = await contract.userIdentities(walletAddress);
             
             if (!userIdentity.governmentId) {

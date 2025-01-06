@@ -3,193 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import axios from "axios";
 import { useWallet } from '../context/WalletContext';
+import { loginStyles } from '../styles/components/login';
 
 const AUTH_MESSAGE = "Please sign this message to authenticate with the Land Management System";
-
-const styles = {
-    container: {
-        width: '100%',
-        maxWidth: '42rem',
-        margin: '0 auto'
-    },
-    title: {
-        fontSize: '1.875rem',
-        fontWeight: 'bold',
-        color: '#111827',
-        marginBottom: '2rem',
-        textAlign: 'center'
-    },
-    errorAlert: {
-        backgroundColor: '#fee2e2',
-        border: '1px solid #ef4444',
-        color: '#b91c1c',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.375rem',
-        marginBottom: '1rem'
-    },
-    blockedAlert: {
-        backgroundColor: '#fee2e2',
-        border: '1px solid #ef4444',
-        color: '#b91c1c',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.375rem',
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center'
-    },
-    warningAlert: {
-        backgroundColor: '#fef3c7',
-        border: '1px solid #f59e0b',
-        color: '#92400e',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.375rem',
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center'
-    },
-    linkButton: {
-        marginLeft: '0.5rem',
-        textDecoration: 'underline',
-        cursor: 'pointer',
-        '&:hover': {
-            textDecoration: 'none'
-        }
-    },
-    mainCard: {
-        backgroundColor: 'white',
-        borderRadius: '0.5rem',
-        padding: '2rem'
-    },
-    connectButton: {
-        width: '100%',
-        background: 'linear-gradient(to right, #3b82f6, #2563eb)',
-        color: 'white',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.5rem',
-        fontSize: '1.125rem',
-        fontWeight: '500',
-        transition: 'all 200ms',
-        '&:hover': {
-            background: 'linear-gradient(to right, #2563eb, #1d4ed8)'
-        },
-        '&:disabled': {
-            opacity: 0.5,
-            cursor: 'not-allowed'
-        }
-    },
-    walletInfoContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem'
-    },
-    walletCard: {
-        padding: '1rem',
-        backgroundColor: '#f9fafb',
-        borderRadius: '0.5rem',
-        border: '1px solid #e5e7eb'
-    },
-    walletLabel: {
-        fontSize: '0.875rem',
-        color: '#4b5563'
-    },
-    walletAddress: {
-        fontFamily: 'monospace',
-        color: '#1f2937',
-        wordBreak: 'break-all'
-    },
-    roleContainer: {
-        marginTop: '0.5rem',
-        fontSize: '0.875rem'
-    },
-    roleLabel: {
-        color: '#4b5563'
-    },
-    roleValue: {
-        fontWeight: '500',
-        color: '#111827'
-    },
-    loginButton: {
-        width: '100%',
-        backgroundColor: '#22c55e',
-        color: 'white',
-        padding: '0.5rem 1rem',
-        borderRadius: '0.375rem',
-        '&:hover': {
-            backgroundColor: '#16a34a'
-        },
-        '&:disabled': {
-            opacity: 0.5,
-            cursor: 'not-allowed'
-        }
-    },
-    registerButton: {
-        width: '100%',
-        backgroundColor: '#a855f7',
-        color: 'white',
-        padding: '0.5rem 1rem',
-        borderRadius: '0.375rem',
-        '&:hover': {
-            backgroundColor: '#9333ea'
-        }
-    },
-    modalOverlay: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 50
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        padding: '1.5rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        maxWidth: '28rem',
-        width: '100%'
-    },
-    modalTitle: {
-        fontSize: '1.25rem',
-        fontWeight: 'bold',
-        marginBottom: '1rem'
-    },
-    modalDescription: {
-        fontSize: '0.875rem',
-        color: '#4b5563',
-        marginBottom: '1rem'
-    },
-    input: {
-        width: '100%',
-        padding: '0.5rem',
-        border: '1px solid #d1d5db',
-        borderRadius: '0.375rem',
-        marginBottom: '1rem'
-    },
-    modalButtonContainer: {
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '0.75rem'
-    },
-    cancelButton: {
-        padding: '0.5rem 1rem',
-        backgroundColor: '#e5e7eb',
-        color: '#1f2937',
-        borderRadius: '0.375rem',
-        '&:hover': {
-            backgroundColor: '#d1d5db'
-        }
-    },
-    submitButton: {
-        padding: '0.5rem 1rem',
-        backgroundColor: '#3b82f6',
-        color: 'white',
-        borderRadius: '0.375rem',
-        '&:hover': {
-            backgroundColor: '#2563eb'
-        }
-    }
-};
 
 const Login = () => {
     const navigate = useNavigate();
@@ -226,7 +42,7 @@ const Login = () => {
         };
 
         checkExistingSession();
-    }, []); // Only depend on navigate
+    }, []); 
 
     // Check user status when wallet or contract changes
     useEffect(() => {
@@ -246,14 +62,12 @@ const Login = () => {
                 
                 if (!isMounted) return;
 
-                // Check if account is blocked
                 if (userIdentity.isBlocked) {
                     setIsBlocked(true);
                     setIsRegistered(false);
                     return;
                 }
 
-                // Check if user is registered and verified
                 const isUserRegistered = userIdentity.governmentId && 
                                        userIdentity.governmentId !== "" && 
                                        userIdentity.isVerified === true;
@@ -275,8 +89,7 @@ const Login = () => {
         return () => {
             isMounted = false;
         };
-    }, [contract, walletAddress]); // Only depend on contract and walletAddress
-
+    }, [contract, walletAddress]); 
     const handleLogin = async () => {
         try {
             if (!walletAddress) {
@@ -315,33 +128,31 @@ const Login = () => {
             navigate("/dashboard");
         } catch (error) {
             console.error('Login error:', error);
-            // Handle specific error cases here
         }
     };
 
-    // Don't render anything while checking session
     if (checkingSession) {
-        return null; // or return a loading spinner
+        return null; 
     }
 
     return (
-        <div style={styles.container}>
-            <h1 style={styles.title}>
+        <div style={loginStyles.container}>
+            <h1 style={loginStyles.title}>
                 Login with Wallet
             </h1>
 
             {error && (
-                <div style={styles.errorAlert}>
+                <div style={loginStyles.errorAlert}>
                     {error}
                 </div>
             )}
 
             {isBlocked && walletAddress && (
-                <div style={styles.blockedAlert}>
+                <div style={loginStyles.blockedAlert}>
                     This wallet has been blocked.
                     <button
                         onClick={() => setShowRecoveryModal(true)}
-                        style={styles.linkButton}
+                        style={loginStyles.linkButton}
                     >
                         Recover Account
                     </button>
@@ -349,35 +160,35 @@ const Login = () => {
             )}
 
             {!isRegistered && walletAddress && !isBlocked && (
-                <div style={styles.warningAlert}>
+                <div style={loginStyles.warningAlert}>
                     This wallet is not registered yet.
                     <button
                         onClick={() => navigate('/register')}
-                        style={styles.linkButton}
+                        style={loginStyles.linkButton}
                     >
                         Register now
                     </button>
                 </div>
             )}
 
-            <div style={styles.mainCard}>
+            <div style={loginStyles.mainCard}>
                 {!walletAddress ? (
                     <button
                         onClick={handleLogin}
                         disabled={isLoading}
-                        style={styles.connectButton}
+                        style={loginStyles.connectButton}
                     >
                         {isLoading ? "Connecting..." : "Connect Wallet"}
                     </button>
                 ) : (
-                    <div style={styles.walletInfoContainer}>
-                        <div style={styles.walletCard}>
-                            <div style={styles.walletLabel}>Connected Wallet</div>
-                            <div style={styles.walletAddress}>{walletAddress}</div>
+                    <div style={loginStyles.walletInfoContainer}>
+                        <div style={loginStyles.walletCard}>
+                            <div style={loginStyles.walletLabel}>Connected Wallet</div>
+                            <div style={loginStyles.walletAddress}>{walletAddress}</div>
                             {userRole && (
-                                <div style={styles.roleContainer}>
-                                    <span style={styles.roleLabel}>Role: </span>
-                                    <span style={styles.roleValue}>{userRole}</span>
+                                <div style={loginStyles.roleContainer}>
+                                    <span style={loginStyles.roleLabel}>Role: </span>
+                                    <span style={loginStyles.roleValue}>{userRole}</span>
                                 </div>
                             )}
                         </div>
@@ -385,7 +196,7 @@ const Login = () => {
                         <button
                             onClick={handleLogin}
                             disabled={isLoading || !isRegistered || isBlocked}
-                            style={styles.loginButton}
+                            style={loginStyles.loginButton}
                         >
                             {isLoading ? "Processing..." : "Login with Wallet"}
                         </button>
@@ -393,7 +204,7 @@ const Login = () => {
                         {!isRegistered && !isBlocked && (
                             <button
                                 onClick={() => navigate('/register')}
-                                style={styles.registerButton}
+                                style={loginStyles.registerButton}
                             >
                                 Register Your Wallet
                             </button>
@@ -403,10 +214,10 @@ const Login = () => {
             </div>
 
             {showRecoveryModal && (
-                <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
-                        <h2 style={styles.modalTitle}>Recover Account</h2>
-                        <p style={styles.modalDescription}>
+                <div style={loginStyles.modalOverlay}>
+                    <div style={loginStyles.modalContent}>
+                        <h2 style={loginStyles.modalTitle}>Recover Account</h2>
+                        <p style={loginStyles.modalDescription}>
                             Enter your Government ID to recover your account. 
                             Make sure you're using a new wallet address.
                         </p>
@@ -416,23 +227,23 @@ const Login = () => {
                                 value={govId}
                                 onChange={(e) => setGovId(e.target.value)}
                                 placeholder="Enter Government ID"
-                                style={styles.input}
+                                style={loginStyles.input}
                                 required
                             />
-                            <div style={styles.modalButtonContainer}>
+                            <div style={loginStyles.modalButtonContainer}>
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setShowRecoveryModal(false);
                                         setGovId('');
                                     }}
-                                    style={styles.cancelButton}
+                                    style={loginStyles.cancelButton}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    style={styles.submitButton}
+                                    style={loginStyles.submitButton}
                                 >
                                     Initiate Recovery
                                 </button>
